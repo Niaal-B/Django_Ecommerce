@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Report</title>
+    <style>
+        /* Reset and base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            background-color: #f4f4f4;
+            color: #333;
+            padding: 20px;
+        }
+
+        .report-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .report-header {
+            background-color: #2c3e50;
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .report-header h2 {
+            font-size: 24px;
+            margin-bottom: 0;
+        }
+
+        .report-details {
+            display: flex;
+            justify-content: space-between;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .report-summary {
+            text-align: right;
+        }
+
+        .report-summary-item {
+            margin-bottom: 10px;
+        }
+
+        .report-summary-item label {
+            color: #6c757d;
+            display: block;
+            font-size: 14px;
+        }
+
+        .report-summary-item .value {
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .total-revenue {
+            color: #28a745;
+        }
+
+        .total-discount {
+            color: #dc3545;
+        }
+
+        .sales-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .sales-table-container {
+            padding: 20px;
+        }
+
+        .sales-table thead {
+            background-color: #f1f3f5;
+        }
+
+        .sales-table th,
+        .sales-table td {
+            border: 1px solid #dee2e6;
+            padding: 12px;
+            text-align: left;
+        }
+
+        .sales-table th {
+            font-weight: bold;
+            color: #495057;
+        }
+
+        .sales-table tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        .sales-table tr:hover {
+            background-color: #f1f3f5;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 50px;
+            background-color: #f8f9fa;
+            color: #6c757d;
+        }
+
+        .report-footer {
+            background-color: #f1f3f5;
+            text-align: center;
+            padding: 10px;
+            color: #6c757d;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="report-container">
+        <div class="report-header">
+            <h2>Sales Report</h2>
+        </div>
+
+        <div class="report-details">
+            <div>
+                <p>Date Range: {{ start_date }} - {{ end_date }}</p>
+            </div>
+            <div class="report-summary">
+                <div class="report-summary-item">
+                    <label>Total Revenue</label>
+                    <div class="value total-revenue">{{total_revenue}}</div>
+                </div>
+                <div class="report-summary-item">
+                    <label>Total Discount</label>
+                    <div class="value total-discount">{{total_order_item_discount}}</div>
+                </div>
+            </div>
+        </div>
+
+        {% if orders %}
+        <div class="sales-table-container">
+            <table class="sales-table">
+                <thead>
+                    <tr>
+                        <th>Order ID</th>
+                        <th>Date</th>
+                        <th>Total Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders %}
+                    <tr>
+                        <td>{{ order.id }}</td>
+                        <td>{{ order.created_at|date:"Y-m-d" }}</td>
+                        <td>{{ order.total_price }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="no-data">
+            <p>No Data Available</p>
+        </div>
+        {% endif %}
+
+
+    </div>
+</body>
+</html>

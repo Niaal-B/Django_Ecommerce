@@ -1,0 +1,148 @@
+<!-- partial:partials/_navbar.html -->
+<style>
+    /* Dropdown container */
+    .dropdown-container {
+      position: relative;
+      display: inline-block;
+    }
+  
+    /* Dropdown menu */
+    .dropdown-menu {
+      display: none;
+      position: absolute;
+      background-color: white;
+      box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+      padding: 10px;
+      border-radius: 8px;
+      z-index: 10;
+      width: 200px;
+    }
+  
+    .dropdown-menu.active {
+      display: block;
+    }
+  
+    /* Dropdown button */
+    .dropdown-button {
+      background-color: #007bff;
+      color: white;
+      padding: 8px 12px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+  
+    /* Input styling */
+    .dropdown-menu input {
+      width: 100%;
+      padding: 5px;
+      margin-bottom: 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+  
+    .dropdown-menu button {
+      width: 100%;
+      background-color: #28a745;
+      color: white;
+      padding: 8px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+  </style>
+<nav class="navbar p-0 fixed-top d-flex flex-row">
+    <div class="navbar-brand-wrapper d-flex d-lg-none align-items-center justify-content-center">
+        <a class="navbar-brand brand-logo-mini" href="index.html"><img src="" alt="logo" /></a>
+    </div>
+    <div class="navbar-menu-wrapper flex-grow d-flex align-items-stretch">
+        <button class="navbar-toggler navbar-toggler align-self-center" type="button" data-toggle="minimize">
+            <span class="mdi mdi-menu"></span>
+        </button>
+        <ul class="navbar-nav w-100">
+            <li class="nav-item w-100">
+                <form class="nav-link mt-2 mt-md-0 d-none d-lg-flex search">
+                    <input type="text" class="form-control" placeholder="Search products">
+                </form>
+            </li>
+        </ul>
+        <ul class="navbar-nav ml-auto">
+            <li class="nav-item">
+                <a href="{% url 'logout' %}" class="nav-link btn btn-primary">
+                    Log out
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <div class="dropdown-container">
+                    <button class="dropdown-button" id="dropdownToggle" style="
+    padding: 2px;
+">Generate sales report</button>
+                    <div class="dropdown-menu active" id="dropdownMenu" style="
+                    margin-top: 270px;
+                ">
+                                      <form id="salesReportForm" method="GET" action="{% url 'generate_sales_report' %}">
+                                        <div>
+                                          <label for="startDate">Start Date:</label>
+                                          <input type="text" id="startDate" name="start_date" placeholder="Start Date" class="flatpickr-input" readonly="readonly">
+                                        </div>
+                                        <div>
+                                          <label for="endDate">End Date:</label>
+                                          <input type="text" id="endDate" name="end_date" placeholder="End Date" class="flatpickr-input" readonly="readonly">
+                                        </div>
+                                        <button type="submit">Download Report</button>
+                                      </form>
+                                    </div>
+                  </div>
+
+            </li>
+            
+
+        </ul>
+        
+        <button class="navbar-toggler navbar-toggler-right d-lg-none align-self-center" type="button" data-toggle="offcanvas">
+            <span class="mdi mdi-format-line-spacing"></span>
+        </button>
+    </div>
+</nav>
+
+
+<!-- Flatpickr CSS -->
+<script>
+    // Toggle dropdown visibility
+    document.getElementById("dropdownToggle").addEventListener("click", function () {
+      const menu = document.getElementById("dropdownMenu");
+      menu.classList.toggle("active");
+    });
+  
+    // Close dropdown when clicking outside
+    document.addEventListener("click", function (event) {
+      const menu = document.getElementById("dropdownMenu");
+      const toggle = document.getElementById("dropdownToggle");
+      if (!menu.contains(event.target) && !toggle.contains(event.target)) {
+        menu.classList.remove("active");
+      }
+    });
+  </script>
+  
+<!-- Bootstrap CSS -->
+<!-- Flatpickr CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<!-- Flatpickr JavaScript -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    flatpickr("#startDate", {
+      dateFormat: "Y-m-d",
+      maxDate: "today",
+    });
+    flatpickr("#endDate", {
+      dateFormat: "Y-m-d",
+      maxDate: "today",
+    });
+  });
+</script>
+
+
+<!-- Bootstrap CSS -->

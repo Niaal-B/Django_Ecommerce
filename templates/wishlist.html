@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+{%load static%}
+{% block title %}Wishlist{% endblock %}
+{% block content %} 
+      <!--=============== WISHLIST ===============-->
+      <section class="wishlist section--lg container">
+        {% if wishlist_items %}
+        <div class="table__container">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Image</th>
+                <th>Name</th>
+                <th>Price</th>
+                <th>Stock Status</th>
+                <th>Action</th>
+                <th>Rename</th>
+              </tr>
+            </thead>
+            <tbody>
+        
+              {% for wishlist_item in wishlist_items %}
+              
+              <tr>
+                <td>
+                  <img
+                    src="{{wishlist_item.item.product.image1.url}}"
+                    alt=""
+                    class="table__img"
+                  />
+                </td>
+                <td>
+                  <h3 class="table__title">
+                    {{wishlist_item.item.product.name}}
+                  </h3>
+                </td>
+                <td>
+                  <span class="table__price">₹{{wishlist_item.item.product.price}}</span>
+                </td>
+                <td><span class="table__stock">{{ wishlist_item.stock_status }} </span></td>
+                <form class="add-to-cart-form" action="{% url 'wishlist_add_to_cart' %}" method="post">
+                  {% csrf_token %}
+                  <input type="hidden" name="product_id" value="{{ wishlist_item.item.product.id }}">
+                  <input type="hidden" name="size" value="{{ wishlist_item.item.size }}">
+                  <td><button type="submit" class="btn btn--sm">Add to Cart</button></td>
+                </form>
+                
+                <form action="{% url 'remove_wishlist_item' wishlist_item.item.id %}" method="post">
+                  {% csrf_token %}
+                  <td><button type="submit" ><i class="fi fi-rs-trash table__trash"></i></button></td>
+                </form>
+                
+              </tr>
+              {% endfor %}
+              {% else %}
+              <h1>No items</h1>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+      <script>
+        const forms = document.querySelectorAll('.add-to-cart-form');
+      
+        forms.forEach(form => {
+          form.addEventListener('submit', function (event) {
+            event.preventDefault(); // Prevent form submission and page reload
+      
+            const formData = new FormData(form);
+      
+            fetch('{% url "wishlist_add_to_cart" %}', {
+              method: 'POST',
+              body: formData,
+              headers: {
+                'X-CSRFToken': document.querySelector('[name="csrfmiddlewaretoken"]').value,
+              }
+            })
+              .then(response => response.json())
+              .then(data => {
+                if (data.success) {
+                  // Display success toast
+                  Swal.fire({
+                    toast: true,
+                    icon: 'success',
+                    title: 'Added to cart!',
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 1500,
+                    timerProgressBar: true,
+                  });
+      
+                  // Remove the item from the DOM
+                  const row = form.closest('tr'); // Find the parent table row
+                  if (row) {
+                    row.remove();
+                  }
+                } else {
+                  // Display error toast
+                  Swal.fire({
+                    toast: true,
+                    icon: 'error',
+                    title: 'The item is already in the cart',
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 1500,
+                    timerProgressBar: true,
+                  });
+                }
+              })
+              .catch(error => {
+                // Handle fetch error
+                Swal.fire({
+                  toast: true,
+                  icon: 'error',
+                  title: 'Failed to process the request!',
+                  position: 'top-end',
+                  showConfirmButton: false,
+                  timer: 1500,
+                  timerProgressBar: true,
+                });
+              });
+          });
+        });
+      </script>
+      
+{% endblock %}
