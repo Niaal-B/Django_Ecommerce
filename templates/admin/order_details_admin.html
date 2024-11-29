@@ -110,7 +110,7 @@
                                         <form action="{% url 'manage-order' order.id %}" method="post">
                                             {% csrf_token %}
                                             <select class="form-control" name="order_status">
-                                                {% if order.status == "pending" %}
+                                                {% if order.status == "Pending" %}
                                                     <option value="pending" selected>Order Pending</option>
                                                     <option value="confirmed">Order confirmed</option>
                                                     <option value="Shipped">Shipped</option>

@@ -516,49 +516,47 @@ document.getElementById("placeOrderBtn").addEventListener("click", function(even
 
         if (selectedPaymentMethod.value === 'razorpay') {
         
-            const options = {
-                key: data.key,
-                amount: data.amount,
-                currency: data.currency,
-                name: "Evara",
-                description: "Order Payment",
-                order_id: data.order_id,
-                handler: function(response) {
-                    // Create form data for payment verification
-                    const formData = new FormData();
-                    formData.append('razorpay_payment_id', response.razorpay_payment_id);
-                    formData.append('razorpay_order_id', response.razorpay_order_id);
-                    formData.append('razorpay_signature', response.razorpay_signature);
+          const options = {
+    key: data.key,
+    amount: data.amount,
+    currency: data.currency,
+    name: "Evara",
+    description: "Order Payment",
+    order_id: data.order_id,
+    handler: function(response) {
+        const formData = new FormData();
+        formData.append('razorpay_payment_id', response.razorpay_payment_id);
+        formData.append('razorpay_order_id', response.razorpay_order_id);
+        formData.append('razorpay_signature', response.razorpay_signature);
+        formData.append('db_order_id', data.order_id_in_db);
 
-                    // Send payment verification request
-                    fetch("{% url 'paymenthandler' %}", {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRFToken': csrftoken,
-                        },
-                        body: formData
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            window.location.href = "{% url 'order_success' %}";
-                        } else {
-                            alert(data.error || "Payment failed");
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        alert("Payment processing failed");
-                    });
-                },
-                prefill: {
-                    name: "{{ request.user.get_full_name }}",
-                    email: "{{ request.user.email }}",
-                },
-                theme: {
-                    color: "#3399cc"
-                }
-            };
+        fetch("{% url 'paymenthandler' %}", {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrftoken },
+            body: formData,
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                window.location.href = "{% url 'order_success' %}";
+            } else {
+                alert("Payment verification failed. Please try again.");
+            }
+        });
+    },
+    modal: {
+        ondismiss: function() {
+            alert("Payment was not completed. Your order is placed as 'Pending'. You can complete payment in the orders section.");
+            window.location.href = "{% url 'account' %}";
+        }
+    },
+    prefill: {
+        name: "{{ request.user.get_full_name }}",
+        email: "{{ request.user.email }}"
+    },
+    theme: { color: "#3399cc" }
+};
+
 
             const razorpayInstance = new Razorpay(options);
             razorpayInstance.open();

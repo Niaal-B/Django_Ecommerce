@@ -92,7 +92,8 @@ def place_order(request):
                     payment_method=payment_method,
                     total_price=total,
                     coupon_code=coupon_code if coupon_code else '',
-                    discount=discount
+                    discount=discount,
+                    status="Pending",
                 )
                 print("order created")
 
@@ -135,7 +136,6 @@ def place_order(request):
 
                        
                         order.razorpay_order_id = razorpay_order['id']
-                        order.payment_status = "Completed"
                         order.save()
 
                         payment_data = {
