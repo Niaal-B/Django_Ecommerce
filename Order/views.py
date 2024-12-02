@@ -236,13 +236,29 @@ from .models import Order, OrderItem
 
 def manage_order_status(request, order_id):
     if request.method == "POST":
-        status = request.POST.get("order_status")  # 
+        status = request.POST.get("order_status")  
         order = get_object_or_404(Order, id=order_id)  
         if status:
-       
+            print(status)
             order.status = status
             if status == "delivered" or status == "Delivered":
                 order.payment_status = "completed" 
+            if status == "Approve Returned":
+                print("this block worked")
+                user = order.user
+                wallet, created = Wallet.objects.get_or_create(user=user)
+                print(wallet)
+                print(order.total_price)
+                wallet.balance += order.total_price
+                wallet.save()
+                WalletTransaction.objects.create(
+                wallet=wallet,
+                amount=order.total_price,
+                transaction_type='CREDIT',
+                description=f"Refund for Order #{order.id}"
+            )
+
+
             order.save()
             
 
