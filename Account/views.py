@@ -10,6 +10,10 @@ from django.contrib.auth.hashers import check_password
 from Order.models import Order,OrderItem
 from Products.models import SizeVariant
 from django.db.models import F
+import razorpay
+from django.conf import settings
+
+
 
 # Create your views here.
 @login_required
@@ -342,3 +346,92 @@ def add_money_to_wallet(request):
             messages.error(request, 'Please enter a valid amount')
         
     return redirect('account')
+
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
+from razorpay import Client
+from Order.models import Order  
+
+import logging
+
+logger = logging.getLogger(__name__)
+
+def retry_payment(request, order_id):
+    try:
+        # Initialize Razorpay client
+        razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+        
+        # Fetch the order
+        order = Order.objects.get(id=order_id)
+
+        # Convert Decimal values to float
+        order_total_price = float(order.total_price)  # Convert to float for JSON serialization
+
+        # Create Razorpay Order
+        razorpay_order = razorpay_client.order.create(dict(
+            amount=int(order_total_price * 100),  # Convert amount to integer (in paise)
+            currency='INR',
+            payment_capture='1'
+        ))
+
+        # Return the necessary data as JSON
+        return JsonResponse({
+            'key': settings.RAZORPAY_KEY_ID,
+            'amount': int(order_total_price * 100),  # Amount in paise (integer)
+            'currency': 'INR',
+            'order_id': razorpay_order['id'],
+        })
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+import json
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from razorpay.errors import SignatureVerificationError
+
+
+from django.http import JsonResponse
+import razorpay
+import json
+
+
+@csrf_exempt
+def payment_handler(request):
+    try:
+        data = json.loads(request.body)
+        razorpay_payment_id = data.get('razorpay_payment_id')
+        razorpay_order_id = data.get('razorpay_order_id')
+        razorpay_signature = data.get('razorpay_signature')
+        order_id = data.get('order_id')
+
+        # Initialize Razorpay client
+        razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+
+        
+        # Verify payment signature using Razorpay API
+        params_dict = {
+            'razorpay_order_id': razorpay_order_id,
+            'razorpay_payment_id': razorpay_payment_id,
+            'razorpay_signature': razorpay_signature,
+        }
+        
+        try:
+            razorpay_client.utility.verify_payment_signature(params_dict)
+        except razorpay.errors.SignatureVerificationError:
+            return JsonResponse({'error': 'Payment verification failed'}, status=400)
+
+        # Update the order status in your database
+        order = Order.objects.get(id=order_id)
+        order.payment_status = 'Completed'
+        order.save()
+
+        return JsonResponse({'status': 'Payment successful'})
+
+    except razorpay.errors.RazorpayError as e:
+        # Handle any Razorpay-specific errors here
+        return JsonResponse({'error': f'Razorpay error: {str(e)}'}, status=500)
+
+    except Exception as e:
+        # Log other errors (for debugging)
+        print(f"Error processing payment: {str(e)}")
+        return JsonResponse({'error': 'An error occurred while processing the payment'}, status=500)

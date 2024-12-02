@@ -13,4 +13,6 @@ urlpatterns = [
     path('request-return/', views.request_return, name='request_return'),
     path('cancel-item-order/',views.cancel_item_order,name='cancel_item_order'),
     path('add-money-to-wallet/', views.add_money_to_wallet, name='add_money_to_wallet'),
+    path('retry-payment/<int:order_id>/', views.retry_payment, name='retry_payment'),
+    path('payment-handler/', views.payment_handler, name='payment_handler'),
     ]
