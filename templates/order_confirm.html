@@ -8,7 +8,8 @@
       href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
       * {
         margin: 0;
@@ -158,6 +159,82 @@
           opacity: 1;
         }
       }
+
+      /* Invoice PDF Styles - Hidden by default */
+      #invoice-container {
+        display: none;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      #invoice-container .invoice-container {
+        background-color: #fff;
+        border-radius: 10px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+        max-width: 800px;
+        width: 100%;
+      }
+      #invoice-container .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 2px solid #007bff;
+        padding-bottom: 15px;
+        margin-bottom: 20px;
+      }
+      #invoice-container .invoice-title {
+        font-size: 24px;
+        font-weight: bold;
+        color: #007bff;
+      }
+      #invoice-container .billed-to,
+      #invoice-container .payment-info {
+        margin-bottom: 20px;
+      }
+      #invoice-container .section-title {
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 10px;
+      }
+      #invoice-container .items {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+      }
+      #invoice-container .items th,
+      #invoice-container .items td {
+        padding: 10px;
+        text-align: left;
+        border: 1px solid #ddd;
+      }
+      #invoice-container .items th {
+        background-color: #f1f1f1;
+        color: #333;
+      }
+      #invoice-container .totals {
+        text-align: right;
+        margin-bottom: 20px;
+      }
+      #invoice-container .totals p {
+        font-size: 16px;
+        margin: 5px 0;
+      }
+      #invoice-container .totals .total-amount {
+        font-size: 18px;
+        font-weight: bold;
+        color: #007bff;
+      }
+      #invoice-container .thank-you {
+        text-align: center;
+        font-size: 18px;
+        color: #007bff;
+        margin-bottom: 20px;
+      }
+      #invoice-container .payment-info {
+        margin-top: 20px;
+      }
     </style>
   </head>
   <body>
@@ -194,16 +271,113 @@
             <span>Total Amount</span>
             <span>₹{{order.total_price}}</span>
           </div>
-
         </div>
         <div class="buttons">
           <a href="/"><button class="home-btn">Back to Home</button></a>
-          <button
-            class="pdf-btn">
-            Get PDF Receipt
-          </button>
+          <button class="pdf-btn" onclick="generatePDF()">Get PDF Receipt</button>
         </div>
       </div>
     </div>
+
+    <!-- Hidden Invoice Container for PDF Generation -->
+    <div id="invoice-container">
+      <div class="invoice-container">
+        <div class="header">
+          <div class="logo"></div>
+          <h1 class="invoice-title">Invoice</h1>
+        </div>
+        <div class="billed-to">
+          <p class="section-title">Pay To:</p>
+          <p>Evara</p>
+        </div>
+        <table class="items">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Quantity</th>
+              <th>Unit Price</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in order_items %}
+            <tr>
+              <td>{{item.product.name}}</td>
+              <td>{{item.quantity}}</td>
+              <td>₹{{item.price}}</td>
+              <td>₹{{item.subtotal}}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        <div class="totals">
+          <p class="total-amount">Total: ₹{{order.total_price}}</p>
+        </div>
+        <div class="thank-you">Thank you for your Purchase!</div>
+        <div class="payment-info">
+          <p class="section-title">Payment Information:</p>
+          <p>Payment Method: {{order.payment_method}}</p>
+          <p>Payment Status: {{order.payment_status}}</p>
+          <p>Order date: {{order.created_at}}</p>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      function generatePDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({
+          orientation: 'portrait',
+          unit: 'mm',
+          format: 'a4'
+        });
+
+        // Get the invoice container
+        const invoiceContainer = document.getElementById('invoice-container');
+        
+        // Temporarily show the container for rendering
+        invoiceContainer.style.display = 'block';
+        
+        // Use html2canvas to convert the invoice to a canvas
+        html2canvas(invoiceContainer, { 
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          allowTaint: true,
+          scrollX: 0,
+          scrollY: -window.scrollY
+        }).then(canvas => {
+          // Hide the container again
+          invoiceContainer.style.display = 'none';
+          
+          // Convert canvas to image
+          const imgData = canvas.toDataURL('image/jpeg', 1.0);
+          
+          // PDF page dimensions
+          const imgWidth = 210; // A4 width in mm
+          const pageHeight = 295; // A4 height in mm
+          
+          // Calculate image height maintaining aspect ratio
+          const imgHeight = canvas.height * imgWidth / canvas.width;
+          
+          try {
+            // Add image to PDF
+            doc.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+            
+            // Save PDF
+            doc.save(`Invoice_{{order.id}}.pdf`);
+          } catch (error) {
+            console.error('PDF Generation Error:', error);
+            alert('Failed to generate PDF. Please try again.');
+          }
+        }).catch(error => {
+          console.error('Canvas Rendering Error:', error);
+          alert('Failed to render invoice. Please try again.');
+          
+          // Hide the container in case of error
+          invoiceContainer.style.display = 'none';
+        });
+      }
+    </script>
   </body>
 </html>

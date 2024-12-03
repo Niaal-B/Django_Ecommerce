@@ -14,7 +14,7 @@ from Coupon.models import Coupon
 from .models import Order, OrderItem
 from Adminauth.views import is_admin
 import logging
-from Order.models import Order
+from Order.models import Order,OrderItem
 
 
 
@@ -189,7 +189,7 @@ def place_order(request):
 
                 cart_items.delete()
                 print("this is order id :",order.id)
-                return JsonResponse({"success": "Order placed successfully!","order_id": order.id}, status=200)
+                return JsonResponse({"success": "Order placed successfully!","order__id": order.id}, status=200)
 
             except json.JSONDecodeError:
                 return JsonResponse({"error": "Invalid request format."}, status=400)
@@ -209,9 +209,14 @@ def place_order(request):
 def order_success(request):
     order_id = request.GET.get('order_id')
     order = get_object_or_404(Order,id=order_id)
+    order_items = OrderItem.objects.filter(order=order)
+    for item in order_items:
+        item.subtotal = item.price * item.quantity
+    print(order)
     print(order)
     context = {
-        "order" : order
+        "order" : order,
+        "order_items" : order_items
         
     }
     return render(request, 'order_confirm.html',context)
@@ -345,7 +350,8 @@ def paymenthandler(request):
                 return JsonResponse({
                     'success': True,
                     'message': 'Payment successful',
-                    'order_id': order_id
+                    'order_id': order_id,
+                    'order__id' :order.id
                 })
                 
             except Order.DoesNotExist:
