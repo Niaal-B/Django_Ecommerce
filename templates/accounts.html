@@ -359,10 +359,17 @@
                   {% csrf_token %}
                   <input
                     type="text"
-                    name="username"
-                    placeholder="Username"
+                    name="firstname"
+                    placeholder="Firstname"
                     class="form__input"
-                    value="{{ user.username }}"  
+                    value="{{ user.first_name }}"  
+                  />
+                  <input
+                    type="text"
+                    name="lastname"
+                    placeholder="Lastname"
+                    class="form__input"
+                    value="{{ user.last_name }}"  
                   />
                   <div class="form__btn">
                     <button type="submit" class="btn btn--md">Save</button>

@@ -538,7 +538,8 @@ document.getElementById("placeOrderBtn").addEventListener("click", function(even
         .then(res => res.json())
         .then(data => {
             if (data.success) {
-                window.location.href = "{% url 'order_success' %}";
+              console.log(data.order_id)
+              window.location.href = "{% url 'order_success' %}?order_id=" + data.order_id;
             } else {
                 alert("Payment verification failed. Please try again.");
             }
@@ -562,7 +563,7 @@ document.getElementById("placeOrderBtn").addEventListener("click", function(even
             razorpayInstance.open();
         } else {
 
-            window.location.href = "{% url 'order_success' %}";
+          window.location.href = "{% url 'order_success' %}?order_id=" + data.order_id;
         }
     })
     .catch(error => {

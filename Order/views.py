@@ -14,6 +14,7 @@ from Coupon.models import Coupon
 from .models import Order, OrderItem
 from Adminauth.views import is_admin
 import logging
+from Order.models import Order
 
 
 
@@ -187,7 +188,8 @@ def place_order(request):
                         return JsonResponse({"error": f"Size variant not found for {item.product.name} (Size: {item.size})."}, status=400)
 
                 cart_items.delete()
-                return JsonResponse({"success": "Order placed successfully!"}, status=200)
+                print("this is order id :",order.id)
+                return JsonResponse({"success": "Order placed successfully!","order_id": order.id}, status=200)
 
             except json.JSONDecodeError:
                 return JsonResponse({"error": "Invalid request format."}, status=400)
@@ -205,7 +207,14 @@ def place_order(request):
 
 
 def order_success(request):
-    return render(request, 'order_confirm.html')
+    order_id = request.GET.get('order_id')
+    order = get_object_or_404(Order,id=order_id)
+    print(order)
+    context = {
+        "order" : order
+        
+    }
+    return render(request, 'order_confirm.html',context)
 
 
 @user_passes_test(is_admin)

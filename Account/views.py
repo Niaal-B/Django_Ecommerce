@@ -38,24 +38,25 @@ def account(request):
 @login_required
 def update_username(request):
     if request.method == 'POST':
-        username = request.POST.get('username')
+        firstname = request.POST.get('firstname')
+        lastname = request.POST.get('lastname')
         user = request.user
 
         
-        if len(username) < 3 or len(username) > 30:
+        if len(firstname) < 3 or len(firstname) > 30:
             messages.error(request, 'Username must be between 3 and 30 characters.')
-        elif not username.isalnum():
+        elif not firstname.isalnum():
             messages.error(request, 'Username can only contain alphanumeric characters.')
-        elif User.objects.filter(username=username).exists():
-            messages.error(request, 'Username already taken.')
         else:
             try:
                 validator = RegexValidator(r'^[a-zA-Z0-9]*$', 'Username must be alphanumeric.')
-                validator(username)
+                validator(firstname)
                 
-                user.username = username
+                user.first_name = firstname
+                user.lastname  = lastname
                 user.save()
-                request.session['username'] = username 
+                request.session['first_name'] = firstname
+                request.session['lastname'] = lastname
                 messages.success(request, 'Username updated successfully!')
             
                 return redirect('account')

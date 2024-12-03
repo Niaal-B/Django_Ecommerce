@@ -99,15 +99,19 @@ def get_date_range(filter_type):
 
 def active_users_count(request):
     filter_type = request.GET.get('filter')
+    print(filter_type,"This is filter type")
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
     
     query = User.objects.filter(is_active=True)
     
+    
     if filter_type:
         start, end = get_date_range(filter_type)
+        print(start,": this is start ",end,": this is end")
         if start and end:
             query = query.filter(date_joined__date__range=[start, end])
+            print("This is query ",query)
     elif start_date and end_date:
         query = query.filter(date_joined__date__range=[start_date, end_date])
     
@@ -264,8 +268,9 @@ def category_wise_sales(request):
     filter_type = request.GET.get('filter')
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
-    
+    print("Hai")
     query = OrderItem.objects
+    
     
     if filter_type:
         start, end = get_date_range(filter_type)
@@ -282,7 +287,8 @@ def category_wise_sales(request):
     
     labels = [entry['product__category__category_name'] for entry in category_sales]
     sales_data = [entry['sales'] for entry in category_sales]
-    
+    print(labels,"this is label")
+    print(sales_data,"this is sales data")
     return JsonResponse({
         'labels': labels,
         'sales_data': sales_data
