@@ -280,6 +280,39 @@ def update_variant(request,variant_id):
         return render(request,'admin/edit_variant.html',context)
 
 
+
+@user_passes_test(is_admin)
+def reduce_variant(request, variant_id):
+    variant = get_object_or_404(SizeVariant, id=variant_id)
+
+    if request.method == 'POST':
+        size = request.POST.get('size')
+        try:
+            stock_to_reduce = int(request.POST.get('stock', 0))  # Convert stock input to an integer
+        except ValueError:
+            messages.error(request, 'Invalid stock value!')
+            return redirect('reduce_variant', variant_id=variant_id)
+
+        # Fetch the current stock value for validation
+        current_stock = variant.stock
+
+        if stock_to_reduce > current_stock:
+            messages.error(request, 'Stock cannot be reduced below 0!')
+            return redirect('reduce_variant', variant_id=variant_id)
+
+        # Update the size and stock
+        variant.size = size
+        variant.stock = F('stock') - stock_to_reduce
+        variant.save()
+
+        messages.success(request, 'Variant updated successfully!')
+        return redirect('variant', product_id=variant.product.id)
+
+    context = {'variant': variant}
+    return render(request, 'admin/edit_variant.html', context)
+
+
+
 def product_details(request,product_id):
     product = Product.objects.get(id = product_id)
     sizes = product.size_variants.filter(stock__gt = 0)

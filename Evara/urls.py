@@ -32,6 +32,7 @@ urlpatterns = [
     path('checkout/',include('Order.urls')),
     path('coupon/',include('Coupon.urls')),
     path('wishlist/',include('Wishlist.urls')),
+    path('messages/', include('messages_app.urls')),
     path('social-auth/', include('social_django.urls', namespace='social')),
 ]
 

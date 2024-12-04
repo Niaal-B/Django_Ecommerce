@@ -8,6 +8,7 @@ urlpatterns = [
     path('variant/<int:product_id>/', views.variant_list, name='variant'),
     path('variant/add/<int:product_id>/', views.add_size_variants, name='add_variant'),
     path('variant/update/<int:variant_id>', views.update_variant, name='update_variant'),
+    path('variant/reduce/<int:variant_id>', views.reduce_variant, name='reduce_variant'),
     path('list/<int:product_id>',views.toggle_product_listing,name='list_unlist'),
     path('details/<int:product_id>',views.product_details,name='product_details')
 ]

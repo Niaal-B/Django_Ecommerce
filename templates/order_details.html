@@ -128,11 +128,9 @@
   margin-bottom: 45px;
 ">Payment Status : {{order.payment_status}}</p>
 {% if order.payment_method == 'razorpay' and order.payment_status == 'pending'  %}
-<div class="payment-container">
     <button class="btn retry-payment" onclick="retryPayment('{{ order.id }}')">Retry Payment</button>
-      </span>
-      Retry Payment
-</div>
+
+
 {% endif %}
       <table class="placed__order-table">
         <thead>

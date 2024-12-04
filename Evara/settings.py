@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     'Order',
     'Coupon',
     'Wishlist',
+    'messages_app',
 ]
 
 MIDDLEWARE = [

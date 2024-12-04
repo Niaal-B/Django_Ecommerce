@@ -253,7 +253,7 @@ def manage_order_status(request, order_id):
         status = request.POST.get("order_status")  
         order = get_object_or_404(Order, id=order_id)  
         if status:
-            print(status)
+        
             order.status = status
             if status == "delivered" or status == "Delivered":
                 order.payment_status = "completed" 

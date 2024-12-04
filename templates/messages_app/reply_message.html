@@ -1,0 +1,7 @@
+<h2>Reply to {{ message.sender.username }}</h2>
+<p>{{ message.content }}</p>
+<form method="POST">
+    {% csrf_token %}
+    <textarea name="content" placeholder="Type your reply"></textarea>
+    <button type="submit">Send Reply</button>
+</form>

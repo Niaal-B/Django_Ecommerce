@@ -309,14 +309,35 @@ def cancel_item_order(request):
 
         
         size_variant = get_object_or_404(SizeVariant, id=variant_id)
-        print(size_variant.stock)
-        print(item.quantity)
+
+        
+
+        if order.payment_method in ['razorpay', 'wallet'] and order.payment_status == 'Completed':
+
+            wallet, created = Wallet.objects.get_or_create(user=request.user)
+            wallet.balance += item.price * item.quantity
+            wallet.save()
+
+            WalletTransaction.objects.create(
+            wallet=wallet,
+            amount=item.price * item.quantity,
+            transaction_type='CREDIT',
+            description=f"Refund for OrderItem #{item.id}"
+        )
+
+
+
         size_variant.stock = F('stock') + item.quantity  
         size_variant.save()       
         order.total_price = F('total_price') - item.price * item.quantity
         order.save()
         item.delete()
-        print(variant_id)
+
+        if not OrderItem.objects.filter(order=order).exists():
+            order.total_price = 0
+            order.status = 'Canceled'
+            order.save()
+ 
     return redirect('view_order_items', order_id=order_id)
 
 

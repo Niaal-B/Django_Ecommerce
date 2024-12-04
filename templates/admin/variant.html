@@ -71,6 +71,8 @@
                                                                     <td>{{ variant.stock }}</td>
                                                                     <td>
                                                                         <a href="{% url 'update_variant' variant.id %}" class="btn btn-primary">Add Variant</a>
+                                                                        <a href="{% url 'reduce_variant' variant.id %}" class="btn btn-secondary">Reduce Variant</a>
+ 
 
                                                                     </td>
                                                                 </tr>
