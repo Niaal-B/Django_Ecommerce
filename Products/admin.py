@@ -3,3 +3,4 @@ from .models import Product,SizeVariant
 
 admin.site.register(Product)
 admin.site.register(SizeVariant) 
+ 
