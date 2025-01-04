@@ -11,7 +11,7 @@ class Cart(models.Model):
     def __str__(self):
         return f'Cart of {self.user.username}'
 
-
+ 
 class CartItem(models.Model):
     cart = models.ForeignKey(Cart, related_name='items', on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
