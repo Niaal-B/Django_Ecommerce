@@ -3,8 +3,8 @@ services:
     name: evara-django-app
     env: python
     plan: starter  # You can change this to 'standard' or 'pro' based on your needs
-    buildCommand: "pip install --upgrade pip && pip install -r requirements.txt && python manage.py collectstatic --noinput"
-    startCommand: "gunicorn Evara.wsgi:application --bind 0.0.0.0:$PORT"
+    buildCommand: "pip install --upgrade pip && pip install -r requirements.txt && python manage.py migrate --noinput && python manage.py collectstatic --noinput"
+    startCommand: "gunicorn Evara.wsgi:application --bind 0.0.0.0:$PORT --timeout 120"
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.0
