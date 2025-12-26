@@ -9,6 +9,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.utils import timezone
 from datetime import timedelta
 from django.http import JsonResponse
+from django.conf import settings
 import re
 
 def generate_otp():
@@ -18,10 +19,21 @@ def send_otp_email(email, otp):
     subject = 'Your OTP Code'
     message = f'Your OTP code is: {otp}'
     try:
-        send_mail(subject, message, 'your_email@gmail.com', [email])
+        # Use EMAIL_HOST_USER from settings, fallback to empty string if not set
+        from_email = getattr(settings, 'EMAIL_HOST_USER', '')
+        if not from_email:
+            # If email is not configured, log but don't fail
+            print("Warning: EMAIL_HOST_USER not configured. OTP email cannot be sent.")
+            # For development/testing, you can still allow registration without email
+            # Uncomment the line below to allow registration without email verification
+            # return True
+            return False
+        
+        send_mail(subject, message, from_email, [email], fail_silently=False)
         return True
     except Exception as e:
         print(f"Error sending email: {e}")
+        # Return False to indicate email failed, but don't crash the app
         return False
 
 def validate_password(password):
@@ -125,8 +137,13 @@ def register(request):
             )
 
             # Send OTP email
-            if not send_otp_email(email, otp):
-                errors['email'] = "Failed to send OTP email. Please try again."
+            email_sent = send_otp_email(email, otp)
+            if not email_sent:
+                # Check if email is configured
+                if not getattr(settings, 'EMAIL_HOST_USER', ''):
+                    errors['email'] = "Email service is not configured. Please contact administrator."
+                else:
+                    errors['email'] = "Failed to send OTP email. Please check your email address and try again."
                 return render(request, 'register.html', {
                     'errors': errors,
                     'username': username,
