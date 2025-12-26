@@ -33,5 +33,8 @@ urlpatterns = [
     path('social-auth/', include('social_django.urls', namespace='social')),
 ]
 
-urlpatterns += static(settings.STATIC_URL, document_root = settings.STATIC_ROOT)
-urlpatterns += static(settings.MEDIA_URL, document_root = settings.MEDIA_ROOT)
+# Serve media files only in DEBUG mode (in production, use cloud storage like AWS S3, Cloudinary, etc.)
+# Static files are served by WhiteNoise in production
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

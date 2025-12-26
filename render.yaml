@@ -1,0 +1,51 @@
+services:
+  - type: web
+    name: evara-django-app
+    env: python
+    plan: starter  # You can change this to 'standard' or 'pro' based on your needs
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn Evara.wsgi:application --bind 0.0.0.0:$PORT"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.0
+      - key: SECRET_KEY
+        sync: false  # Set this in Render dashboard
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: "your-app-name.onrender.com"  # Update with your actual Render domain
+      - key: DB_HOST
+        fromDatabase:
+          name: evara-postgres
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: evara-postgres
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: evara-postgres
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: evara-postgres
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: evara-postgres
+          property: password
+      - key: EMAIL_HOST_USER
+        sync: false  # Set this in Render dashboard
+      - key: EMAIL_HOST_PASSWORD
+        sync: false  # Set this in Render dashboard
+      - key: SOCIAL_AUTH_GOOGLE_OAUTH2_KEY
+        sync: false  # Set this in Render dashboard
+      - key: SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET
+        sync: false  # Set this in Render dashboard
+
+databases:
+  - name: evara-postgres
+    plan: starter  # You can change this based on your needs
+    databaseName: evara
+    user: evara_user
+

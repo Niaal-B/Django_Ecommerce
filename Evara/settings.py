@@ -9,9 +9,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# DEBUG can be set via environment variable (string 'True'/'False' or boolean)
+DEBUG = os.environ.get('DEBUG', 'False').lower() in ('true', '1', 'yes')
 
-ALLOWED_HOSTS = ['*']
+# ALLOWED_HOSTS can be set via environment variable (comma-separated list)
+ALLOWED_HOSTS_STR = os.environ.get('ALLOWED_HOSTS', '*')
+ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS_STR.split(',')]
 
 # Application definition
 INSTALLED_APPS = [
@@ -37,6 +40,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # Add WhiteNoise for static files
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -70,14 +74,15 @@ TEMPLATES = [
 WSGI_APPLICATION = 'Evara.wsgi.application'
 
 # Database configuration
+# Use environment variables from Docker if available, otherwise use .env file
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'evara', 
-        'USER': 'nihal',
-        'PASSWORD': config('DATABASE_PASSWORD'), 
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'NAME': os.environ.get('DB_NAME', config('DB_NAME', default='evara')),
+        'USER': os.environ.get('DB_USER', config('DB_USER', default='nihal')),
+        'PASSWORD': os.environ.get('DB_PASSWORD', config('DB_PASSWORD', default='')),
+        'HOST': os.environ.get('DB_HOST', config('DB_HOST', default='localhost')),
+        'PORT': os.environ.get('DB_PORT', config('DB_PORT', default='5432')),
     }
 }
 
@@ -115,11 +120,14 @@ EMAIL_HOST_USER = config('EMAIL_HOST_USER')  # Reads from .env
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')  # Reads from .env
 
 # Static files (CSS, JavaScript, Images)
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static')
 ]
 STATIC_ROOT = os.path.join(BASE_DIR, 'assets')
+
+# WhiteNoise configuration for static files
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
