@@ -118,6 +118,7 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')  # Reads from .env
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')  # Reads from .env
+EMAIL_TIMEOUT = 5  # Timeout in seconds for email operations to prevent worker timeout
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'

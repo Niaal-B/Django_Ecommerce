@@ -26,20 +26,17 @@ def send_otp_email(email, otp):
             print("Warning: EMAIL_HOST_USER not configured. OTP email cannot be sent.")
             return False
         
-        # Use fail_silently=True and timeout to prevent worker timeout
-        # The email backend will handle errors without blocking
-        send_mail(
+        # Use fail_silently=True to prevent exceptions from blocking
+        # EMAIL_TIMEOUT is set in settings.py to prevent worker timeout
+        result = send_mail(
             subject, 
             message, 
             from_email, 
             [email], 
-            fail_silently=True,  # Don't raise exceptions, return success/failure
-            timeout=5  # 5 second timeout to prevent hanging
+            fail_silently=True  # Don't raise exceptions, return success/failure
         )
-        # Note: With fail_silently=True, send_mail returns the number of emails sent (0 or 1)
-        # Since we can't reliably know if it succeeded, we'll return True
-        # In production, you should use celery or similar for async email sending
-        return True
+        # send_mail returns the number of emails sent (0 if failed, 1 if succeeded)
+        return result == 1
     except Exception as e:
         print(f"Error sending email: {e}")
         # Return False to indicate email failed, but don't crash the app
