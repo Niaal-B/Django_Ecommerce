@@ -21,25 +21,39 @@ def send_otp_email(email, otp):
     try:
         # Use EMAIL_HOST_USER from settings, fallback to empty string if not set
         from_email = getattr(settings, 'EMAIL_HOST_USER', '')
+        email_password = getattr(settings, 'EMAIL_HOST_PASSWORD', '')
+        
         if not from_email:
-            # If email is not configured, log but don't fail
             print("Warning: EMAIL_HOST_USER not configured. OTP email cannot be sent.")
             return False
         
-        # Use fail_silently=True to prevent exceptions from blocking
+        if not email_password:
+            print("Warning: EMAIL_HOST_PASSWORD not configured. OTP email cannot be sent.")
+            return False
+        
+        # Use fail_silently=False temporarily to see actual errors, then catch them
         # EMAIL_TIMEOUT is set in settings.py to prevent worker timeout
-        result = send_mail(
-            subject, 
-            message, 
-            from_email, 
-            [email], 
-            fail_silently=True  # Don't raise exceptions, return success/failure
-        )
-        # send_mail returns the number of emails sent (0 if failed, 1 if succeeded)
-        return result == 1
+        try:
+            result = send_mail(
+                subject, 
+                message, 
+                from_email, 
+                [email], 
+                fail_silently=False  # Raise exceptions so we can log them
+            )
+            # send_mail returns the number of emails sent (0 if failed, 1 if succeeded)
+            if result == 1:
+                print(f"OTP email sent successfully to {email}")
+                return True
+            else:
+                print(f"Failed to send email to {email}: send_mail returned {result}")
+                return False
+        except Exception as email_error:
+            # Log the actual email error for debugging
+            print(f"Email sending error: {type(email_error).__name__}: {str(email_error)}")
+            return False
     except Exception as e:
-        print(f"Error sending email: {e}")
-        # Return False to indicate email failed, but don't crash the app
+        print(f"Error in send_otp_email: {type(e).__name__}: {str(e)}")
         return False
 
 def validate_password(password):
