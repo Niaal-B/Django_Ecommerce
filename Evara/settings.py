@@ -6,7 +6,8 @@ from decouple import config  # Importing decouple to use config()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Load sensitive settings from the .env file
-SECRET_KEY = config('SECRET_KEY')
+# Fallback to os.environ for production (Render) or config for local development
+SECRET_KEY = os.environ.get('SECRET_KEY', config('SECRET_KEY', default='django-insecure-temp-key-change-in-production'))
 
 # SECURITY WARNING: don't run with debug turned on in production!
 # DEBUG can be set via environment variable (string 'True'/'False' or boolean)
@@ -15,6 +16,9 @@ DEBUG = os.environ.get('DEBUG', 'False').lower() in ('true', '1', 'yes')
 # ALLOWED_HOSTS can be set via environment variable (comma-separated list)
 ALLOWED_HOSTS_STR = os.environ.get('ALLOWED_HOSTS', '*')
 ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS_STR.split(',')]
+
+# Django sites framework - Required for django-allauth
+SITE_ID = 1
 
 # Application definition
 INSTALLED_APPS = [
@@ -157,13 +161,31 @@ LOGGING = {
             'class': 'logging.StreamHandler',
         },
     },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
     'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
         'social_core': {
             'handlers': ['console'],
             'level': 'DEBUG',
         },
     },
 }
+
+# Production security settings
+if not DEBUG:
+    SECURE_SSL_REDIRECT = False  # Render handles SSL termination
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = 'DENY'
 
 SOCIAL_AUTH_PIPELINE = (
     'social_core.pipeline.social_auth.social_details',
