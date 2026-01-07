@@ -1,6 +1,7 @@
 from pathlib import Path
 import os
 from decouple import config  # Importing decouple to use config()
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -79,16 +80,27 @@ WSGI_APPLICATION = 'Evara.wsgi.application'
 
 # Database configuration
 # Use environment variables from Docker if available, otherwise use .env file
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME', config('DB_NAME', default='evara')),
-        'USER': os.environ.get('DB_USER', config('DB_USER', default='nihal')),
-        'PASSWORD': os.environ.get('DB_PASSWORD', config('DB_PASSWORD', default='')),
-        'HOST': os.environ.get('DB_HOST', config('DB_HOST', default='localhost')),
-        'PORT': os.environ.get('DB_PORT', config('DB_PORT', default='5432')),
+DATABASE_URL = os.environ.get("DATABASE_URL")
+if DATABASE_URL:
+    # Render usually provides DATABASE_URL when the DB is linked
+    DATABASES = {
+        "default": dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=600,
+            ssl_require=True,
+        )
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.environ.get('DB_NAME', config('DB_NAME', default='evara')),
+            'USER': os.environ.get('DB_USER', config('DB_USER', default='nihal')),
+            'PASSWORD': os.environ.get('DB_PASSWORD', config('DB_PASSWORD', default='')),
+            'HOST': os.environ.get('DB_HOST', config('DB_HOST', default='localhost')),
+            'PORT': os.environ.get('DB_PORT', config('DB_PORT', default='5432')),
+        }
+    }
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")

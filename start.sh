@@ -3,8 +3,14 @@
 
 set -o errexit  # Exit on error
 
-echo "Running database migrations..."
-python manage.py migrate --noinput
+echo "Running database migrations (with retry)..."
+for i in {1..10}; do
+  if python manage.py migrate --noinput; then
+    break
+  fi
+  echo "Migrate failed (attempt $i/10). Waiting 3s and retrying..."
+  sleep 3
+done
 
 echo "Setting up Django Site..."
 python setup_site.py || echo "Site setup failed or already exists"
