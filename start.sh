@@ -15,6 +15,9 @@ done
 echo "Setting up Django Site..."
 python setup_site.py || echo "Site setup failed or already exists"
 
+echo "Creating admin superuser..."
+python manage.py create_admin || echo "Admin user creation failed or already exists"
+
 echo "Starting gunicorn..."
 exec gunicorn Evara.wsgi:application --bind 0.0.0.0:$PORT --timeout 120
 
