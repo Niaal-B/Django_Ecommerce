@@ -45,9 +45,16 @@ def send_otp_email(email, otp):
                 return True
             else:
                 print(f"Failed to send email to {email}: status {response.status_code}")
+                print(f"Response body: {response.body}")
+                print(f"Response headers: {response.headers}")
                 return False
         except Exception as email_error:
             print(f"Email sending error: {type(email_error).__name__}: {str(email_error)}")
+            # Log more details if it's a SendGrid exception
+            if hasattr(email_error, 'body'):
+                print(f"SendGrid error body: {email_error.body}")
+            if hasattr(email_error, 'status_code'):
+                print(f"SendGrid status code: {email_error.status_code}")
             return False
     except Exception as e:
         print(f"Error in send_otp_email: {type(e).__name__}: {str(e)}")
