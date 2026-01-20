@@ -125,13 +125,25 @@ if CLOUDINARY_CLOUD_NAME and CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET:
         
         # Cloudinary Storage Settings - Use Cloudinary for media files
         DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
-        print("Cloudinary configured successfully")
+        
+        # Verify Cloudinary is working
+        print(f"Cloudinary configured successfully - Cloud Name: {CLOUDINARY_CLOUD_NAME}")
+        print(f"Using storage: {DEFAULT_FILE_STORAGE}")
+    except ImportError as e:
+        print(f"Warning: Cloudinary packages not installed: {e}")
+        print("Install with: pip install cloudinary django-cloudinary-storage")
+        DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
     except Exception as e:
         print(f"Warning: Cloudinary configuration failed: {e}")
+        import traceback
+        print(traceback.format_exc())
         # Fallback to default storage if Cloudinary fails
         DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
 else:
     print("Warning: Cloudinary credentials not found. Using default file storage.")
+    print(f"CLOUDINARY_CLOUD_NAME: {'SET' if CLOUDINARY_CLOUD_NAME else 'NOT SET'}")
+    print(f"CLOUDINARY_API_KEY: {'SET' if CLOUDINARY_API_KEY else 'NOT SET'}")
+    print(f"CLOUDINARY_API_SECRET: {'SET' if CLOUDINARY_API_SECRET else 'NOT SET'}")
     # Fallback to default storage if credentials are missing
     DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
 

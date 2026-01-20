@@ -105,9 +105,18 @@ def create_product(request):
             )
             product.save()
             
-            # Log image URLs for debugging (check if Cloudinary is working)
+            # Log image URLs and storage backend for debugging (check if Cloudinary is working)
+            from django.conf import settings
+            print(f"Current DEFAULT_FILE_STORAGE: {getattr(settings, 'DEFAULT_FILE_STORAGE', 'Not set')}")
+            
             if product.image1:
                 print(f"Product image1 URL: {product.image1.url}")
+                print(f"Product image1 storage: {product.image1.storage}")
+                # Check if it's a Cloudinary URL
+                if 'res.cloudinary.com' in product.image1.url:
+                    print("✓ Image1 is using Cloudinary!")
+                else:
+                    print("✗ Image1 is NOT using Cloudinary (using local storage)")
             if product.image2:
                 print(f"Product image2 URL: {product.image2.url}")
             if product.image3:
