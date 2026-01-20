@@ -19,16 +19,17 @@ def send_otp_email(email, otp):
     subject = 'Your OTP Code'
     message = f'Your OTP code is: {otp}'
     try:
-        # Use EMAIL_HOST_USER from settings, fallback to empty string if not set
-        from_email = getattr(settings, 'EMAIL_HOST_USER', '')
-        email_password = getattr(settings, 'EMAIL_HOST_PASSWORD', '')
+        # For SendGrid, EMAIL_HOST_USER is usually literal "apikey".
+        # Use DEFAULT_FROM_EMAIL (verified sender) as the actual From address.
+        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', '')
+        sendgrid_key = getattr(settings, 'EMAIL_HOST_PASSWORD', '')
         
         if not from_email:
-            print("Warning: EMAIL_HOST_USER not configured. OTP email cannot be sent.")
+            print("Warning: DEFAULT_FROM_EMAIL not configured. OTP email cannot be sent.")
             return False
         
-        if not email_password:
-            print("Warning: EMAIL_HOST_PASSWORD not configured. OTP email cannot be sent.")
+        if not sendgrid_key:
+            print("Warning: SENDGRID_API_KEY not configured. OTP email cannot be sent.")
             return False
         
         # Use fail_silently=False temporarily to see actual errors, then catch them

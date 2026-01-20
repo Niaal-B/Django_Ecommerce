@@ -13,7 +13,11 @@ services:
       - key: DEBUG
         value: "False"
       - key: ALLOWED_HOSTS
-        value: ".onrender.com"  # Allows all onrender.com subdomains
+        value: ".onrender.com"
+      - key: SENDGRID_API_KEY
+        sync: false  # Set in Render dashboard (do not commit secrets)
+      - key: DEFAULT_FROM_EMAIL
+        sync: false  # Verified SendGrid sender (e.g. nihnihal504@example.com)
       - key: DB_HOST
         fromDatabase:
           name: evara-postgres

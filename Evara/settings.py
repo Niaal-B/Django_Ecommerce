@@ -127,15 +127,19 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-# Email configuration
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
+# Email configuration (SendGrid SMTP)
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.sendgrid.net"
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')  # Reads from .env
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')  # Reads from .env
-EMAIL_TIMEOUT = 5  # Timeout in seconds for email operations to prevent worker timeout
 
+# SendGrid SMTP: username is literal "apikey"; password is your SendGrid API key
+EMAIL_HOST_USER = os.environ.get("SENDGRID_USERNAME", "apikey")
+EMAIL_HOST_PASSWORD = os.environ.get("SENDGRID_API_KEY", "")
+
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "")
+
+EMAIL_TIMEOUT = 10
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [
