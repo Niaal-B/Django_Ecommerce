@@ -140,6 +140,9 @@ EMAIL_HOST_PASSWORD = os.environ.get("SENDGRID_API_KEY", "")
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "")
 
 EMAIL_TIMEOUT = 10
+
+# SendGrid Web API key (for HTTP-based sending, not SMTP)
+SENDGRID_API_KEY = os.environ.get("SENDGRID_API_KEY", "")
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [

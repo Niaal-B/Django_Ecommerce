@@ -1,5 +1,4 @@
 from django.shortcuts import render, redirect
-from django.core.mail import send_mail
 from django.contrib.auth.models import User
 from django.contrib import messages
 from .models import OTP
@@ -10,6 +9,8 @@ from django.utils import timezone
 from datetime import timedelta
 from django.http import JsonResponse
 from django.conf import settings
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
 import re
 
 def generate_otp():
@@ -19,38 +20,33 @@ def send_otp_email(email, otp):
     subject = 'Your OTP Code'
     message = f'Your OTP code is: {otp}'
     try:
-        # For SendGrid, EMAIL_HOST_USER is usually literal "apikey".
-        # Use DEFAULT_FROM_EMAIL (verified sender) as the actual From address.
-        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', '')
-        sendgrid_key = getattr(settings, 'EMAIL_HOST_PASSWORD', '')
-        
+        from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "")
+        api_key = getattr(settings, "SENDGRID_API_KEY", "")
+
         if not from_email:
             print("Warning: DEFAULT_FROM_EMAIL not configured. OTP email cannot be sent.")
             return False
-        
-        if not sendgrid_key:
+
+        if not api_key:
             print("Warning: SENDGRID_API_KEY not configured. OTP email cannot be sent.")
             return False
-        
-        # Use fail_silently=False temporarily to see actual errors, then catch them
-        # EMAIL_TIMEOUT is set in settings.py to prevent worker timeout
+
         try:
-            result = send_mail(
-                subject, 
-                message, 
-                from_email, 
-                [email], 
-                fail_silently=False  # Raise exceptions so we can log them
+            sg = SendGridAPIClient(api_key)
+            mail = Mail(
+                from_email=from_email,
+                to_emails=email,
+                subject=subject,
+                plain_text_content=message,
             )
-            # send_mail returns the number of emails sent (0 if failed, 1 if succeeded)
-            if result == 1:
+            response = sg.send(mail)
+            if 200 <= response.status_code < 300:
                 print(f"OTP email sent successfully to {email}")
                 return True
             else:
-                print(f"Failed to send email to {email}: send_mail returned {result}")
+                print(f"Failed to send email to {email}: status {response.status_code}")
                 return False
         except Exception as email_error:
-            # Log the actual email error for debugging
             print(f"Email sending error: {type(email_error).__name__}: {str(email_error)}")
             return False
     except Exception as e:
