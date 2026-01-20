@@ -46,6 +46,12 @@ services:
         sync: false  # Set this in Render dashboard
       - key: SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET
         sync: false  # Set this in Render dashboard
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false  # Set in Render dashboard (get from Cloudinary dashboard)
+      - key: CLOUDINARY_API_KEY
+        sync: false  # Set in Render dashboard (get from Cloudinary dashboard)
+      - key: CLOUDINARY_API_SECRET
+        sync: false  # Set in Render dashboard (get from Cloudinary dashboard)
 
 databases:
   - name: evara-postgres

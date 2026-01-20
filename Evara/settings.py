@@ -29,6 +29,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'cloudinary',
+    'cloudinary_storage',
     'allauth',
     'django.contrib.sites',
     'social_django',
@@ -102,7 +104,24 @@ else:
         }
     }
 
+# Cloudinary Configuration
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
+
+cloudinary.config(
+    cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME', ''),
+    api_key=os.environ.get('CLOUDINARY_API_KEY', ''),
+    api_secret=os.environ.get('CLOUDINARY_API_SECRET', ''),
+    secure=True
+)
+
+# Cloudinary Storage Settings - Use Cloudinary for media files
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+
+# MEDIA_URL and MEDIA_ROOT - Cloudinary handles actual storage, but keep URL for compatibility
 MEDIA_URL = '/media/'
+# MEDIA_ROOT is not needed when using Cloudinary, but kept for backward compatibility
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 # Password validation
