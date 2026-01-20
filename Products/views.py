@@ -104,11 +104,23 @@ def create_product(request):
                 image3=image3,
             )
             product.save()
+            
+            # Log image URLs for debugging (check if Cloudinary is working)
+            if product.image1:
+                print(f"Product image1 URL: {product.image1.url}")
+            if product.image2:
+                print(f"Product image2 URL: {product.image2.url}")
+            if product.image3:
+                print(f"Product image3 URL: {product.image3.url}")
 
             messages.success(request, "Product created successfully.")
             return redirect('product_management')
 
         except Exception as e:
+            import traceback
+            error_details = traceback.format_exc()
+            print(f"Error creating product: {str(e)}")
+            print(f"Traceback: {error_details}")
             messages.error(request, f"Error creating product: {str(e)}")
             return redirect('create_product')
 
