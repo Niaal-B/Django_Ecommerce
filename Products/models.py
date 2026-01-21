@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.files.storage import default_storage
 from Categories.models import Category
 
 class Product(models.Model):
@@ -8,6 +9,7 @@ class Product(models.Model):
     price = models.DecimalField(max_digits=7, decimal_places=2)  # Adjusted precision
     offer = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)  # Increased precision
     color = models.CharField(max_length=50, null=True, blank=True)
+    # Storage will use DEFAULT_FILE_STORAGE from settings (Cloudinary if configured)
     image1 = models.ImageField(upload_to='products/', null=True)
     image2 = models.ImageField(upload_to='products/', null=True, blank=True)
     image3 = models.ImageField(upload_to='products/', null=True, blank=True)
