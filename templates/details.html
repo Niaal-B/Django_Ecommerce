@@ -97,11 +97,21 @@
       <section class="details section--lg">
         <div class="details__container container grid">
        <div class="details__group">
-  <img src="{{product.image2.url}}" id="zoom-image" class="details__img product__img" data-zoom-image="" />
+  {% if product.image2 %}
+    <img src="{{product.image2.url}}" id="zoom-image" class="details__img product__img" data-zoom-image="" />
+  {% elif product.image1 %}
+    <img src="{{product.image1.url}}" id="zoom-image" class="details__img product__img" data-zoom-image="" />
+  {% endif %}
   <div class="details__small-images grid">
-    <img src="{{product.image2.url}}" alt="" class="details__small-img" onclick="updateMainImage('{{product.image2.url}}')" />
-    <img src="{{product.image1.url}}" alt="" class="details__small-img" onclick="updateMainImage('{{product.image1.url}}')" />
-    <img src="{{product.image3.url}}" alt="" class="details__small-img" onclick="updateMainImage('{{product.image3.url}}')" />
+    {% if product.image1 %}
+      <img src="{{product.image1.url}}" alt="" class="details__small-img" onclick="updateMainImage('{{product.image1.url}}')" />
+    {% endif %}
+    {% if product.image2 %}
+      <img src="{{product.image2.url}}" alt="" class="details__small-img" onclick="updateMainImage('{{product.image2.url}}')" />
+    {% endif %}
+    {% if product.image3 %}
+      <img src="{{product.image3.url}}" alt="" class="details__small-img" onclick="updateMainImage('{{product.image3.url}}')" />
+    {% endif %}
   </div>
 </div>
           <div class="details__group">
@@ -386,11 +396,13 @@
           <div class="product__item">
             <div class="product__banner">
               <a href="details.html" class="product__images">
+                {% if product.image1 %}
                 <img
                   src="{{product.image1.url}}"
                   alt=""
                   class="product__img default"
                 />
+                {% endif %}
                 <img
                   src="assets/img/product-1-2.jpg"
                   alt=""

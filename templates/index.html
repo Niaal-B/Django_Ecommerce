@@ -28,7 +28,9 @@
           <div class="swiper-wrapper">
             {% for category in categories %}
     <a href="{%url 'shop'%}?category_id={{ category.id }}" class="category__item swiper-slide">
+        {% if category.image %}
         <img src="{{ category.image.url }}" alt="" class="category__img" />
+        {% endif %}
         <h3 class="category__title">{{ category.category_name}}</h3>
     </a>
 {% endfor %}
@@ -60,16 +62,20 @@
               <div class="product__item">
                 <div class="product__banner">
                   <a href="details.html" class="product__images">
+                    {% if product.image1 %}
                     <img
                       src="{{product.image1.url}}"
                       alt=""
                       class="product__img default"
                     />
+                    {% endif %}
+                    {% if product.image2 %}
                     <img
                       src="{{product.image2.url}}"
                       alt=""
                       class="product__img hover"
                     />
+                    {% endif %}
                   </a>
                   <div class="product__actions">
                     <a href="#" class="action__btn" aria-label="Quick View">
@@ -1107,16 +1113,20 @@
               
               <div class="product__banner">
                 <a href="{% url 'product_details' product.id %}" class="product__images">
+                  {% if product.image1 %}
                   <img
                     src="{{product.image1.url}}"
                     alt=""
                     class="product__img default"
                   />
+                  {% endif %}
+                  {% if product.image2 %}
                   <img
                     src="{{product.image2.url}}"
                     alt=""
                     class="product__img hover"
                   />
+                  {% endif %}
                 </a>
                 <div class="product__actions">
                   <a href="#" class="action__btn" aria-label="Quick View">
@@ -1182,11 +1192,13 @@
             {% for product in deals_products %}
             <div class="showcase__item">
               <a href="{% url 'product_details' product.id %}" class="showcase__img-box">
+                {% if product.image1 %}
                 <img
                   src="{{product.image1.url}}"
                   alt=""
                   class="showcase__img"
                 />
+                {% endif %}
               </a>
               <div class="showcase__content">
                 <a href="details.html">

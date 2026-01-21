@@ -281,7 +281,9 @@
                   {% for item in cart_items %}
                   <tr>
                     <td>
+                      {% if item.product.image1 %}
                       <img src="{{ item.product.image1.url }}" alt="" class="order__img" />
+                      {% endif %}
                     </td>
                     <td>
                       <h3 class="table__title">{{ item.product.name }}</h3>
