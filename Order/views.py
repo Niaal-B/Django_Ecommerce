@@ -170,6 +170,19 @@ def admin_order_details(request, order_id):
         return redirect('admin_login') 
 
     order = get_object_or_404(Order, id=order_id)
+
+    if request.method == "POST":
+        for key, value in request.POST.items():
+            if key.startswith("status_"):
+                try:
+                    item_id = key.split("_")[1]
+                    item = OrderItem.objects.get(id=item_id, order=order)
+                    item.status = value
+                    item.save()
+                except (IndexError, OrderItem.DoesNotExist, ValueError):
+                    continue
+        return redirect('order-view', order_id=order_id)
+
     order_items = order.items.all()
     for items in order_items:
         items.subtotal = items.quantity * items.price

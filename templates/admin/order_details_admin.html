@@ -1,6 +1,7 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <!-- Required meta tags -->
     <meta charset="utf-8">
@@ -24,34 +25,50 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     <style>
         /* Define the keyframes for the twinkling effect */
-/* Define the keyframes for the twinkling effect */
-@keyframes twinkle {
-    0% { opacity: 1; }
-    50% { opacity: 0.7; }
-    100% { opacity: 1; }
-}
+        /* Define the keyframes for the twinkling effect */
+        @keyframes twinkle {
+            0% {
+                opacity: 1;
+            }
 
-/* Smaller red circle with shadow and twinkling effect */
-.twinkle-circle {
-    display: inline-block;
-    width: 10px; /* Smaller size */
-    height: 10px; /* Smaller size */
-    background: radial-gradient(circle, #ff5e5e, #ff0000); /* Lighter gradient */
-    border-radius: 50%;
-    margin-right: 5px;
-    box-shadow: 0 0 5px rgba(255, 0, 0, 0.4); /* Slightly reduced shadow */
-    animation: twinkle 1s infinite;
-}
+            50% {
+                opacity: 0.7;
+            }
 
-/* Light red text without bold */
-.twinkle-text {
-    color: #ff5e5e; /* Lighter red */
-    text-shadow: 0 0 3px rgba(255, 94, 94, 0.5); /* Softer shadow */
-    font-weight: normal; /* Remove bold */
-    animation: twinkle 1s infinite;
-}
+            100% {
+                opacity: 1;
+            }
+        }
+
+        /* Smaller red circle with shadow and twinkling effect */
+        .twinkle-circle {
+            display: inline-block;
+            width: 10px;
+            /* Smaller size */
+            height: 10px;
+            /* Smaller size */
+            background: radial-gradient(circle, #ff5e5e, #ff0000);
+            /* Lighter gradient */
+            border-radius: 50%;
+            margin-right: 5px;
+            box-shadow: 0 0 5px rgba(255, 0, 0, 0.4);
+            /* Slightly reduced shadow */
+            animation: twinkle 1s infinite;
+        }
+
+        /* Light red text without bold */
+        .twinkle-text {
+            color: #ff5e5e;
+            /* Lighter red */
+            text-shadow: 0 0 3px rgba(255, 94, 94, 0.5);
+            /* Softer shadow */
+            font-weight: normal;
+            /* Remove bold */
+            animation: twinkle 1s infinite;
+        }
     </style>
 </head>
+
 <body>
     <div class="container-scroller">
         <!-- Include your header and sidebar here -->
@@ -90,12 +107,12 @@
                                                     <h4>Shipping Address</h4>
                                                     <p><strong>Name:</strong> {{ order.address.name }}</p>
                                                     <p><strong>Phone Number:</strong> {{ order.address.phone }}</p>
-                                                    <p><strong>Pin Code:</strong> {{ order.address.postcode }}</p>  
+                                                    <p><strong>Pin Code:</strong> {{ order.address.postcode }}</p>
 
                                                     <p><strong>Country:</strong> {{ order.address.country }}</p>
                                                     <p><strong>District:</strong> {{ order.address.city }}</p>
                                                     <p><strong>Address:</strong> {{ order.address.address }}</p>
-                        
+
                                                 </div>
                                             </div>
                                         </div>
@@ -107,87 +124,99 @@
                                             <h4>Product Details</h4>
                                             <form method="POST" action="">
                                                 {% csrf_token %}
-                                          <table class="table table-striped">
-    <thead>
-        <tr>
-            <th>Product Name</th>
-            <th>Quantity</th>
-            <th>Price</th>
-            <th>Status</th>
-            {% if item.status == "Requested Return" %}
-            
-            {% else %}
-            <th>Message</th>
-            {% endif %}
-            <th>Subtotal</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for item in order_items %}
-        <tr>
-            <td>{{ item.product }}</td>
-            <td>{{ item.quantity }}</td>
-            <td>₹{{ item.price }}</td>
-            <td>{{item.order.status}}</td>
-            <td>
-                <select class="form-control" name="status_{{ item.id }}">
-                    {% if item.order.status == "pending" %}
-                        <option value="pending" selected>Order Pending</option>
-                        <option value="Order confirmed">Order confirmed</option>
-                        <option value="Shipped">Shipped</option>
-                        <option value="Out For Delivery">Out For Delivery</option>
-                        <option value="Delivered">Delivered</option>
-                        <option value="Cancelled">Cancelled</option>
-                    {% elif item.status == "Order confirmed" %}
-                        <option value="Order confirmed" selected>Order confirmed</option>
-                        <option value="Shipped">Shipped</option>
-                        <option value="Out For Delivery">Out For Delivery</option>
-                        <option value="Delivered">Delivered</option>
-                        <option value="Cancelled">Cancelled</option>
-                    {% elif item.status == "Shipped" %}
-                        <option value="Shipped" selected>Shipped</option>
-                        <option value="Out For Delivery">Out For Delivery</option>
-                        <option value="Delivered">Delivered</option>
-                        <option value="Cancelled">Cancelled</option>
-                    {% elif item.status == "Out For Delivery" %}
-                        <option value="Out For Delivery" selected>Out For Delivery</option>
-                        <option value="Delivered">Delivered</option>
-                        <option value="Cancelled">Cancelled</option>
-                    {% elif item.status == "Delivered" %}
-                        <option value="Delivered" selected>Delivered</option>
-                    {% elif item.status == "Cancelled" %}
-                        <option value="Cancelled" selected>Cancelled</option>
-                    {% elif item.status == "Requested Return" %}
-                        <option value="Approve Returned" selected>Approve Returned</option>
-                        <option value="Reject Returned" selected>Reject Returned</option>
-                    {% elif item.status == "Requested Return" %}
-                    <option value="Approve Returned" selected>Approve Returned</option>
-                    {% elif item.status == "Reject Returned" %}
-                    <option value="Reject Returned" selected>Reject Returned(Delivered)</option>
-                    {% endif %}
-                </select>
-            </td>
-            {% if item.status == "Requested Return" %}
-            <td>
-                <!-- Red circle with twinkling effect -->
-              
-                <strong class="twinkle-text">{{ item.return_reason }}</strong>
-            </td>
-            {% else %}
-            <td>
-                <!-- Red circle with twinkling effect -->
-              
-                <strong class="twinkle-text"></strong>
-            </td>
-        {% endif %}
-        
-            <td>₹{{ item.subtotal }}</td>
-        </tr>
-        {% endfor %}
-        
-    </tbody>
-</table>
-<button type="submit" class="btn btn-primary">Update Status</button>
+                                                <table class="table table-striped">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Product Name</th>
+                                                            <th>Quantity</th>
+                                                            <th>Price</th>
+                                                            <th>Status</th>
+                                                            {% if item.status == "Requested Return" %}
+
+                                                            {% else %}
+                                                            <th>Message</th>
+                                                            {% endif %}
+                                                            <th>Subtotal</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {% for item in order_items %}
+                                                        <tr>
+                                                            <td>{{ item.product }}</td>
+                                                            <td>{{ item.quantity }}</td>
+                                                            <td>₹{{ item.price }}</td>
+                                                            <td>{{item.order.status}}</td>
+                                                            <td>
+                                                                <select class="form-control"
+                                                                    name="status_{{ item.id }}">
+                                                                    {% if item.status == "Pending" or item.status == "pending" %}
+                                                                    <option value="pending" selected>Order Pending
+                                                                    </option>
+                                                                    <option value="Order confirmed">Order confirmed
+                                                                    </option>
+                                                                    <option value="Shipped">Shipped</option>
+                                                                    <option value="Out For Delivery">Out For Delivery
+                                                                    </option>
+                                                                    <option value="Delivered">Delivered</option>
+                                                                    <option value="Cancelled">Cancelled</option>
+                                                                    {% elif item.status == "Order confirmed" %}
+                                                                    <option value="Order confirmed" selected>Order
+                                                                        confirmed</option>
+                                                                    <option value="Shipped">Shipped</option>
+                                                                    <option value="Out For Delivery">Out For Delivery
+                                                                    </option>
+                                                                    <option value="Delivered">Delivered</option>
+                                                                    <option value="Cancelled">Cancelled</option>
+                                                                    {% elif item.status == "Shipped" %}
+                                                                    <option value="Shipped" selected>Shipped</option>
+                                                                    <option value="Out For Delivery">Out For Delivery
+                                                                    </option>
+                                                                    <option value="Delivered">Delivered</option>
+                                                                    <option value="Cancelled">Cancelled</option>
+                                                                    {% elif item.status == "Out For Delivery" %}
+                                                                    <option value="Out For Delivery" selected>Out For
+                                                                        Delivery</option>
+                                                                    <option value="Delivered">Delivered</option>
+                                                                    <option value="Cancelled">Cancelled</option>
+                                                                    {% elif item.status == "Delivered" %}
+                                                                    <option value="Delivered" selected>Delivered
+                                                                    </option>
+                                                                    {% elif item.status == "Cancelled" %}
+                                                                    <option value="Cancelled" selected>Cancelled
+                                                                    </option>
+                                                                    {% elif item.status == "Requested Return" %}
+                                                                    <option value="Approve Returned" selected>Approve
+                                                                        Returned</option>
+                                                                    <option value="Reject Returned" selected>Reject
+                                                                        Returned</option>
+                                                                    {% elif item.status == "Reject Returned" %}
+                                                                    <option value="Reject Returned" selected>Reject
+                                                                        Returned(Delivered)</option>
+                                                                    {% endif %}
+                                                                </select>
+                                                            </td>
+                                                            {% if item.status == "Requested Return" %}
+                                                            <td>
+                                                                <!-- Red circle with twinkling effect -->
+
+                                                                <strong class="twinkle-text">{{ item.return_reason
+                                                                    }}</strong>
+                                                            </td>
+                                                            {% else %}
+                                                            <td>
+                                                                <!-- Red circle with twinkling effect -->
+
+                                                                <strong class="twinkle-text"></strong>
+                                                            </td>
+                                                            {% endif %}
+
+                                                            <td>₹{{ item.subtotal }}</td>
+                                                        </tr>
+                                                        {% endfor %}
+
+                                                    </tbody>
+                                                </table>
+                                                <button type="submit" class="btn btn-primary">Update Status</button>
 
                                         </div>
                                     </div>
@@ -224,4 +253,5 @@
     <!-- SweetAlert JS -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
 </body>
+
 </html>
