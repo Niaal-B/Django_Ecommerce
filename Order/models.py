@@ -18,6 +18,12 @@ class Order(models.Model):
     payment_method = models.CharField(max_length=20)
     total_price = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(max_length=10, choices=ORDER_STATUS_CHOICES, default='pending')
+    payment_status = models.CharField(max_length=10, default="Pending")
+    payment_id = models.CharField(max_length=100, blank=True, null=True)
+    razorpay_order_id = models.CharField(max_length=100, blank=True, null=True)
+    return_reason = models.TextField(blank=True, null=True)
+    coupon_code = models.CharField(max_length=50, blank=True, null=True)
+    discount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -30,8 +36,8 @@ class OrderItem(models.Model):
     quantity = models.PositiveIntegerField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
     size_variant = models.ForeignKey(SizeVariant, on_delete=models.CASCADE, null=True)
-
-    
+    status = models.CharField(max_length=20, default='Pending')
+    discount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
 
     def __str__(self):
         return f"{self.quantity} x {self.product.name}"

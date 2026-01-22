@@ -10,6 +10,9 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import user_passes_test
 from Adminauth.views import is_admin 
+import razorpay
+from django.conf import settings
+from django.views.decorators.csrf import csrf_exempt
 
 
 from decimal import Decimal
@@ -77,7 +80,32 @@ def place_order(request):
             if payment_method == 'COD' and total > 1000:
                 return JsonResponse({"error": "Cash on Delivery is not available for orders above ₹1000."}, status=400)
 
-           
+            if payment_method == "razorpay":
+                client = razorpay.Client(auth=(settings.RAZOR_KEY_ID, settings.RAZOR_KEY_SECRET))
+                payment_amount = int(total * 100)
+                currency = "INR"
+                
+                payment_data = {
+                    "amount": payment_amount,
+                    "currency": currency,
+                    "payment_capture": "1"
+                }
+                
+                razorpay_order = client.order.create(data=payment_data)
+                razorpay_order_id = razorpay_order['id']
+
+                context = {
+                    'razorpay_order_id': razorpay_order_id,
+                    'razorpay_merchant_key': settings.RAZOR_KEY_ID,
+                    'razorpay_amount': payment_amount,
+                    'currency': currency,
+                    'callback_url': "payment_success",  # URL to handle success
+                    'address_id': address_id,
+                    'payment_method': "razorpay",
+                }
+                return JsonResponse(context)
+
+            # Create Order for COD
             order = Order.objects.create(
                 user=user,
                 address=address,
@@ -152,3 +180,82 @@ def admin_order_details(request, order_id):
         'order_items': order_items
     }
     return render(request, 'admin/order_details_admin.html', context)
+
+@login_required
+def payment_success(request):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            razorpay_payment_id = data.get('razorpay_payment_id')
+            razorpay_order_id = data.get('razorpay_order_id')
+            razorpay_signature = data.get('razorpay_signature')
+            address_id = data.get('address_id')
+
+            client = razorpay.Client(auth=(settings.RAZOR_KEY_ID, settings.RAZOR_KEY_SECRET))
+            
+            # Verify Signature
+            params_dict = {
+                'razorpay_order_id': razorpay_order_id,
+                'razorpay_payment_id': razorpay_payment_id,
+                'razorpay_signature': razorpay_signature
+            }
+            
+            try:
+                client.utility.verify_payment_signature(params_dict)
+            except Exception as e:
+                return JsonResponse({'error': f'Payment verification failed: {str(e)}'}, status=400)
+
+            # Get User and Address
+            user = request.user
+            address = Address.objects.get(id=address_id, user=user)
+            
+            # Calculate Total from Cart again to be safe
+            cart = Cart.objects.get(user=user)
+            cart_items = CartItem.objects.filter(cart=cart)
+            
+            total = Decimal('0.00')
+            for item in cart_items:
+                price = Decimal(str(item.product.offer if item.product.offer and item.product.offer > 0 else item.product.price))
+                item.subtotal = price * Decimal(str(item.quantity))
+                total += item.subtotal
+                
+            delivery_charge = Decimal('40.00') if total < Decimal('500.00') else Decimal('0.00')
+            total += delivery_charge
+
+            # Create Order
+            order = Order.objects.create(
+                user=user,
+                address=address,
+                payment_method="razorpay",
+                total_price=total,
+                payment_status="Paid",
+                payment_id=razorpay_payment_id,
+                razorpay_order_id=razorpay_order_id
+            )
+
+            # Create Order Items and Decrease Stock
+            for item in cart_items:
+                size_variant = SizeVariant.objects.get(product=item.product, size=item.size)
+                size_variant.stock -= int(item.quantity)
+                size_variant.save()
+
+                price = item.product.offer if item.product.offer and item.product.offer > 0 else item.product.price
+                OrderItem.objects.create(
+                    order=order,
+                    product=item.product,
+                    quantity=item.quantity,
+                    price=price,
+                    size_variant=size_variant,
+                    status="Pending",
+                    discount=0.00
+                )
+
+            # Clear Cart
+            cart_items.delete()
+
+            return JsonResponse({'success': 'Payment successful and order placed!'})
+
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+            
+    return JsonResponse({'error': 'Invalid request'}, status=400)

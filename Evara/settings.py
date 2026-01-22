@@ -217,6 +217,11 @@ EMAIL_TIMEOUT = 10
 
 # SendGrid Web API key (for HTTP-based sending, not SMTP)
 SENDGRID_API_KEY = os.environ.get("SENDGRID_API_KEY", "")
+
+# Razorpay Configuration
+RAZOR_KEY_ID = os.environ.get('RAZOR_KEY_ID', config('RAZOR_KEY_ID', default=''))
+RAZOR_KEY_SECRET = os.environ.get('RAZOR_KEY_SECRET', config('RAZOR_KEY_SECRET', default=''))
+
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [
