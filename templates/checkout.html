@@ -231,7 +231,8 @@
           <div class="saved__addresses">
             {% for address in addresses %}
             <div class="address__card">
-              <input type="radio" name="selected_address" id="address_{{ address.id }}" value="{{ address.id }}" {% if forloop.first %}checked{% endif %} class="address__input">
+              <input type="radio" name="selected_address" id="address_{{ address.id }}" value="{{ address.id }}" {% if
+                forloop.first %}checked{% endif %} class="address__input">
               <label for="address_{{ address.id }}" class="address__label">
                 <div class="address__content">
                   <h4 class="address__name">{{ address.name }}</h4>
@@ -384,7 +385,7 @@
   function openEditModal(id, name, address, postcode, city, state, phone) {
     const modal = document.getElementById('editModal');
     document.getElementById('editId').value = id;
-    console.log(id)
+
     document.getElementById('editName').value = name;
     document.getElementById('editAddress').value = address;
     document.getElementById('editPostcode').value = postcode;

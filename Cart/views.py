@@ -14,7 +14,7 @@ def cart(request):
         if request.method == 'POST':
             for item in CartItem.objects.filter(cart=request.user.cart):
                 quantity = request.POST.get(f'quantity_{item.id}')
-                print(quantity)
+
                 if quantity:
                     item.quantity = int(float(quantity))  
                     item.save()

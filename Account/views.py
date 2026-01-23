@@ -114,7 +114,7 @@ def edit_address(request):
     if request.method == 'POST':
         address_id = request.POST.get('id')
         address = get_object_or_404(Address, id=address_id)
-        print(address_id,"address id yaan")
+
 
         name = request.POST.get('name')
         address_line = request.POST.get('address')
@@ -123,13 +123,7 @@ def edit_address(request):
         country = request.POST.get('country')
         postcode = request.POST.get('postcode')
         phone = request.POST.get('phone')
-        print(name)
-        print(address_line)
-        print(city)
-        print(state)
-        print(country)
-        print(postcode)
-        print(phone)
+
         
         if not postcode.isdigit():
             messages.error(request, 'Postcode must be numeric.')
