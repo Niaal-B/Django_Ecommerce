@@ -538,6 +538,54 @@
 
   // Function to open Razorpay payment modal
   function openRazorpayModal(responseData, selectedAddressId, csrftoken) {
+    // Track whether we've already processed a successful payment to avoid duplicates
+    let paymentProcessed = false;
+    const currentPaymentOrderId = responseData.razorpay_order_id;
+
+    // Helper to process a successful payment response and notify the server
+    function processPaymentSuccess(razorpayResponse) {
+      const paymentId = razorpayResponse.razorpay_payment_id;
+      const orderId = razorpayResponse.razorpay_order_id;
+      const signature = razorpayResponse.razorpay_signature;
+
+      if (!paymentId || !orderId || !signature) {
+        alert("Payment response incomplete. Please contact support.");
+        console.error("Missing payment data:", razorpayResponse);
+        return;
+      }
+
+      console.log("Processing payment success:", { paymentId, orderId });
+
+      // Payment Success - send data to server
+      axios.post("{% url 'payment_success' %}", {
+        razorpay_payment_id: paymentId,
+        razorpay_order_id: orderId,
+        razorpay_signature: signature,
+        address_id: selectedAddressId
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrftoken,
+        }
+      })
+        .then(function (res) {
+          console.log("Server Response:", res.data); // Debug log
+          if (res.data.success) {
+            window.location.href = "{% url 'order_success' %}";
+          } else {
+            alert(res.data.error || "Payment verification failed");
+          }
+        })
+        .catch(function (err) {
+          console.error("Payment verification error:", err);
+          if (err.response) {
+            alert("Payment verification failed: " + (err.response.data.error || err.response.statusText));
+          } else {
+            alert("Payment verification failed via server. Please check your order status.");
+          }
+        });
+    }
+
     // Validate all required fields
     if (!responseData.razorpay_order_id) {
       alert("Payment order not created. Please try again.");
@@ -567,47 +615,15 @@
       "order_id": responseData.razorpay_order_id,
       "handler": function (razorpayResponse) {
         // Razorpay response structure: {razorpay_payment_id, razorpay_order_id, razorpay_signature}
-        console.log("Razorpay Response:", razorpayResponse); // Debug log
-        
-        // Extract payment details
-        const paymentId = razorpayResponse.razorpay_payment_id;
-        const orderId = razorpayResponse.razorpay_order_id;
-        const signature = razorpayResponse.razorpay_signature;
-        
-        if (!paymentId || !orderId || !signature) {
-          alert("Payment response incomplete. Please contact support.");
-          console.error("Missing payment data:", razorpayResponse);
+        console.log("Razorpay Handler Response:", razorpayResponse); // Debug log
+
+        if (paymentProcessed) {
+          console.log("Payment already processed via another handler; ignoring duplicate.");
           return;
         }
-        
-        // Payment Success - send data to server
-        axios.post("{% url 'payment_success' %}", {
-          razorpay_payment_id: paymentId,
-          razorpay_order_id: orderId,
-          razorpay_signature: signature,
-          address_id: selectedAddressId
-        }, {
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': csrftoken,
-          }
-        })
-          .then(function (res) {
-            console.log("Server Response:", res.data); // Debug log
-            if (res.data.success) {
-              window.location.href = "{% url 'order_success' %}";
-            } else {
-              alert(res.data.error || "Payment verification failed");
-            }
-          })
-          .catch(function (err) {
-            console.error("Payment verification error:", err);
-            if (err.response) {
-              alert("Payment verification failed: " + (err.response.data.error || err.response.statusText));
-            } else {
-              alert("Payment verification failed via server. Please check your order status.");
-            }
-          });
+
+        paymentProcessed = true;
+        processPaymentSuccess(razorpayResponse);
       },
       "prefill": {
         "name": "{{ request.user.username }}",
@@ -620,6 +636,13 @@
       "modal": {
         "ondismiss": function() {
           console.log("Payment modal closed by user");
+          // If payment wasn't processed, there is a chance the user closed the modal
+          // after completing payment in a separate window (rare, but safer to hint)
+          if (!paymentProcessed && currentPaymentOrderId) {
+            console.log("Modal closed before payment was confirmed. Order ID:", currentPaymentOrderId);
+            // Lightweight hint to the user; actual status can be checked in their orders.
+            alert("If you completed the payment, please check your order history to confirm. If not, you can try again.");
+          }
         }
       }
     };
@@ -708,7 +731,13 @@
       });
       
       rzp1.on('payment.authorized', function(response) {
-        console.log("Payment authorized:", response);
+        console.log("Payment authorized event:", response);
+        // For some methods (like wallets), authorized can fire even if handler doesn't.
+        if (!paymentProcessed && response && response.razorpay_payment_id) {
+          console.log("Processing payment from authorized event.");
+          paymentProcessed = true;
+          processPaymentSuccess(response);
+        }
       });
       
     } catch (error) {
