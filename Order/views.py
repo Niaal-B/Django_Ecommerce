@@ -10,7 +10,6 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import user_passes_test
 from Adminauth.views import is_admin 
-import razorpay
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 
@@ -81,6 +80,10 @@ def place_order(request):
                 return JsonResponse({"error": "Cash on Delivery is not available for orders above ₹1000."}, status=400)
 
             if payment_method == "razorpay":
+                try:
+                    import razorpay
+                except ImportError as e:
+                    return JsonResponse({"error": f"Payment gateway not available: {str(e)}"}, status=503)
                 client = razorpay.Client(auth=(settings.RAZOR_KEY_ID, settings.RAZOR_KEY_SECRET))
                 payment_amount = int(total * 100)
                 currency = "INR"
@@ -204,6 +207,10 @@ def payment_success(request):
             razorpay_signature = data.get('razorpay_signature')
             address_id = data.get('address_id')
 
+            try:
+                import razorpay
+            except ImportError as e:
+                return JsonResponse({'error': f'Payment gateway not available: {str(e)}'}, status=503)
             client = razorpay.Client(auth=(settings.RAZOR_KEY_ID, settings.RAZOR_KEY_SECRET))
             
             # Verify Signature

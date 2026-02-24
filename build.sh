@@ -7,7 +7,7 @@ echo "Building Django application..."
 
 # Install dependencies
 pip install --upgrade pip
-pip install 'setuptools[legacy]>=65.5.0'  # Install setuptools with legacy support for pkg_resources
+pip install 'setuptools==69.5.1'  # Install setuptools version that includes pkg_resources
 pip install -r requirements.txt
 
 # Collect static files
