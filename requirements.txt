@@ -1,4 +1,4 @@
-setuptools>=65.5.0
+setuptools[legacy]>=65.5.0
 arabic-reshaper==3.0.0
 asgiref==3.8.1
 asn1crypto==1.5.1

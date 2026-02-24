@@ -3,7 +3,7 @@ services:
     name: evara-django-app
     env: python
     plan: starter  # You can change this to 'standard' or 'pro' based on your needs
-    buildCommand: "pip install --upgrade pip && pip install -r requirements.txt && python manage.py collectstatic --noinput"
+    buildCommand: "pip install --upgrade pip && pip install 'setuptools[legacy]>=65.5.0' && pip install -r requirements.txt && python manage.py collectstatic --noinput"
     startCommand: "./start.sh"
     envVars:
       - key: PYTHON_VERSION
