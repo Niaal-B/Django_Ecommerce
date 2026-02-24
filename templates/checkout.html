@@ -408,8 +408,253 @@
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script>
+  // Function to load Razorpay script dynamically with error handling
+  function loadRazorpayScript() {
+    return new Promise(function(resolve, reject) {
+      // Check if already loaded
+      if (typeof Razorpay !== 'undefined') {
+        console.log("Razorpay script already loaded");
+        resolve();
+        return;
+      }
+      
+      // Check if script tag already exists
+      var existingScript = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
+      if (existingScript) {
+        // Wait for it to load
+        existingScript.onload = function() {
+          if (typeof Razorpay !== 'undefined') {
+            resolve();
+          } else {
+            reject(new Error("Razorpay script failed to load"));
+          }
+        };
+        existingScript.onerror = function() {
+          reject(new Error("Failed to load Razorpay script"));
+        };
+        return;
+      }
+      
+      var script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.async = true;
+      script.onload = function() {
+        console.log("Razorpay script loaded successfully");
+        if (typeof Razorpay !== 'undefined') {
+          resolve();
+        } else {
+          reject(new Error("Razorpay object not available after script load"));
+        }
+      };
+      script.onerror = function() {
+        console.error("Failed to load Razorpay script");
+        reject(new Error("Failed to load payment gateway"));
+      };
+      document.head.appendChild(script);
+    });
+  }
+  
+  // Load Razorpay script when page loads
+  var razorpayLoaded = false;
+  loadRazorpayScript()
+    .then(function() {
+      razorpayLoaded = true;
+      console.log("Razorpay ready");
+    })
+    .catch(function(error) {
+      console.error("Razorpay script loading error:", error);
+      // Don't show alert on page load, only when user tries to pay
+    });
+
+  // Extract payment logic to separate function
+  function proceedWithPayment(selectedAddressId, paymentMethod) {
+    // Get CSRF token from cookie
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          if (cookie.substring(0, name.length + 1) === (name + '=')) {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
+          }
+        }
+      }
+      return cookieValue;
+    }
+    const csrftoken = getCookie('csrftoken');
+
+    axios.post("{% url 'place_order' %}", {
+      address_id: selectedAddressId,
+      payment_method: paymentMethod,
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrftoken,
+      }
+    })
+      .then(function (response) {
+        // Check if Razorpay is loaded before trying to use it
+        if (paymentMethod === "razorpay") {
+          if (typeof Razorpay === 'undefined') {
+            // Try to load script if not loaded
+            loadRazorpayScript()
+              .then(function() {
+                // Retry opening payment modal
+                openRazorpayModal(response.data, selectedAddressId, csrftoken);
+              })
+              .catch(function(error) {
+                console.error("Failed to load Razorpay:", error);
+                alert("Payment gateway is not available. Please refresh the page and try again.");
+              });
+            return;
+          }
+          
+          // Open Razorpay modal
+          openRazorpayModal(response.data, selectedAddressId, csrftoken);
+        } else if (response.data.success) {
+          window.location.href = 'success';
+        } else {
+          alert(response.data.error || "Something went wrong");
+        }
+      })
+      .catch(function (error) {
+        console.error("Order placement error:", error);
+        if (error.response) {
+          alert(error.response.data.error || "An error occurred while placing the order.");
+        } else {
+          alert("Network error occurred. Please try again.");
+        }
+      });
+  }
+
+  // Function to open Razorpay payment modal
+  function openRazorpayModal(responseData, selectedAddressId, csrftoken) {
+    // Validate all required fields
+    if (!responseData.razorpay_order_id) {
+      alert("Payment order not created. Please try again.");
+      console.error("Missing razorpay_order_id:", responseData);
+      return;
+    }
+    
+    if (!responseData.razorpay_merchant_key) {
+      alert("Payment gateway configuration error. Please contact support.");
+      console.error("Missing razorpay_merchant_key:", responseData);
+      return;
+    }
+    
+    if (!responseData.razorpay_amount) {
+      alert("Payment amount error. Please try again.");
+      console.error("Missing razorpay_amount:", responseData);
+      return;
+    }
+
+    // Initialize Razorpay
+    var options = {
+      "key": responseData.razorpay_merchant_key,
+      "amount": responseData.razorpay_amount,
+      "currency": responseData.currency || "INR",
+      "name": "Evara Ecommerce",
+      "description": "Order Payment",
+      "order_id": responseData.razorpay_order_id,
+      "handler": function (razorpayResponse) {
+        // Razorpay response structure: {razorpay_payment_id, razorpay_order_id, razorpay_signature}
+        console.log("Razorpay Response:", razorpayResponse); // Debug log
+        
+        // Extract payment details
+        const paymentId = razorpayResponse.razorpay_payment_id;
+        const orderId = razorpayResponse.razorpay_order_id;
+        const signature = razorpayResponse.razorpay_signature;
+        
+        if (!paymentId || !orderId || !signature) {
+          alert("Payment response incomplete. Please contact support.");
+          console.error("Missing payment data:", razorpayResponse);
+          return;
+        }
+        
+        // Payment Success - send data to server
+        axios.post("{% url 'payment_success' %}", {
+          razorpay_payment_id: paymentId,
+          razorpay_order_id: orderId,
+          razorpay_signature: signature,
+          address_id: selectedAddressId
+        }, {
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken,
+          }
+        })
+          .then(function (res) {
+            console.log("Server Response:", res.data); // Debug log
+            if (res.data.success) {
+              window.location.href = "{% url 'order_success' %}";
+            } else {
+              alert(res.data.error || "Payment verification failed");
+            }
+          })
+          .catch(function (err) {
+            console.error("Payment verification error:", err);
+            if (err.response) {
+              alert("Payment verification failed: " + (err.response.data.error || err.response.statusText));
+            } else {
+              alert("Payment verification failed via server. Please check your order status.");
+            }
+          });
+      },
+      "prefill": {
+        "name": "{{ request.user.username }}",
+        "email": "{{ request.user.email }}",
+        "contact": "{{ request.user.phone_number }}"
+      },
+      "theme": {
+        "color": "#3399cc"
+      },
+      "modal": {
+        "ondismiss": function() {
+          console.log("Payment modal closed by user");
+        }
+      }
+    };
+    
+    try {
+      var rzp1 = new Razorpay(options);
+      rzp1.open();
+      
+      rzp1.on('payment.failed', function (response) {
+        console.error("Payment Failed:", response);
+        let errorMsg = "Payment Failed: ";
+        if (response.error) {
+          if (response.error.description) {
+            errorMsg += response.error.description;
+          } else if (response.error.reason) {
+            errorMsg += response.error.reason;
+          } else {
+            errorMsg += JSON.stringify(response.error);
+          }
+        } else {
+          errorMsg += "Unknown error occurred";
+        }
+        alert(errorMsg);
+        
+        // Suggest alternative payment methods for wallet/netbanking issues
+        if (errorMsg.includes("wallet") || errorMsg.includes("netbanking") || errorMsg.includes("bank")) {
+          console.log("Wallet/Netbanking payment failed. User can try card payment.");
+        }
+      });
+      
+      rzp1.on('payment.authorized', function(response) {
+        console.log("Payment authorized:", response);
+      });
+      
+    } catch (error) {
+      console.error("Error initializing Razorpay:", error);
+      alert("Error opening payment gateway. Please refresh the page and try again.");
+    }
+  }
+
+  // Main event listener
   document.getElementById("placeOrderBtn").addEventListener("click", function (event) {
     event.preventDefault();
 
@@ -420,119 +665,19 @@
     const paymentMethod = selectedPaymentMethod ? selectedPaymentMethod.value : null;
 
     if (selectedAddressId && paymentMethod) {
-      // Get CSRF token from cookie
-      function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-          const cookies = document.cookie.split(';');
-          for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-              cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-              break;
-            }
-          }
-        }
-        return cookieValue;
+      // If Razorpay payment and script not loaded, load it first
+      if (paymentMethod === "razorpay" && typeof Razorpay === 'undefined') {
+        loadRazorpayScript()
+          .then(function() {
+            proceedWithPayment(selectedAddressId, paymentMethod);
+          })
+          .catch(function(error) {
+            alert("Payment gateway is not available. Please refresh the page and try again.");
+            console.error("Razorpay loading error:", error);
+          });
+      } else {
+        proceedWithPayment(selectedAddressId, paymentMethod);
       }
-      const csrftoken = getCookie('csrftoken');
-
-      // Add Razorpay Script dynamically if not present or just assume it is added in head/body
-
-      axios.post("{% url 'place_order' %}", {
-        address_id: selectedAddressId,
-        payment_method: paymentMethod,
-      }, {
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': csrftoken,
-        }
-      })
-        .then(function (response) {
-
-          if (response.data.razorpay_order_id) {
-            // Initialize Razorpay
-            var options = {
-              "key": response.data.razorpay_merchant_key,
-              "amount": response.data.razorpay_amount,
-              "currency": response.data.currency,
-              "name": "Evara Ecommerce",
-              "description": "Order Payment",
-              "order_id": response.data.razorpay_order_id,
-              "handler": function (razorpayResponse) {
-                // Razorpay response structure: {razorpay_payment_id, razorpay_order_id, razorpay_signature}
-                console.log("Razorpay Response:", razorpayResponse); // Debug log
-                
-                // Extract payment details
-                const paymentId = razorpayResponse.razorpay_payment_id;
-                const orderId = razorpayResponse.razorpay_order_id;
-                const signature = razorpayResponse.razorpay_signature;
-                
-                if (!paymentId || !orderId || !signature) {
-                  alert("Payment response incomplete. Please contact support.");
-                  console.error("Missing payment data:", razorpayResponse);
-                  return;
-                }
-                
-                // Payment Success - send data to server
-                axios.post("{% url 'payment_success' %}", {
-                  razorpay_payment_id: paymentId,
-                  razorpay_order_id: orderId,
-                  razorpay_signature: signature,
-                  address_id: selectedAddressId
-                }, {
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrftoken,
-                  }
-                })
-                  .then(function (res) {
-                    console.log("Server Response:", res.data); // Debug log
-                    if (res.data.success) {
-                      window.location.href = "{% url 'order_success' %}";
-                    } else {
-                      alert(res.data.error || "Payment verification failed");
-                    }
-                  })
-                  .catch(function (err) {
-                    console.error("Payment verification error:", err);
-                    if (err.response) {
-                      alert("Payment verification failed: " + (err.response.data.error || err.response.statusText));
-                    } else {
-                      alert("Payment verification failed via server. Please check your order status.");
-                    }
-                  });
-              },
-              "prefill": {
-                "name": "{{ request.user.username }}",
-                "email": "{{ request.user.email }}",
-                "contact": "{{ request.user.phone_number }}"
-              },
-              "theme": {
-                "color": "#3399cc"
-              }
-            };
-            var rzp1 = new Razorpay(options);
-            rzp1.open();
-
-            rzp1.on('payment.failed', function (response) {
-              console.error("Payment Failed:", response);
-              alert("Payment Failed: " + (response.error.description || response.error.reason || "Unknown error"));
-            });
-
-          } else if (response.data.success) {
-            window.location.href = 'success';
-          } else {
-            alert(response.data.error || "Something went wrong");
-          }
-        })
-        .catch(function (error) {
-          if (error.response) {
-            alert(error.response.data.error || "An error occurred while placing the order.");
-          } else {
-            alert("Network error occurred. Please try again.");
-          }
-        });
     } else {
       alert("Please select both address and payment method.");
     }
