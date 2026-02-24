@@ -1,3 +1,4 @@
+setuptools>=65.5.0
 arabic-reshaper==3.0.0
 asgiref==3.8.1
 asn1crypto==1.5.1
@@ -58,4 +59,3 @@ dj-database-url==2.2.0
 sendgrid==6.11.0
 cloudinary==1.36.0
 django-cloudinary-storage==0.3.0
-setuptools
