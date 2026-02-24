@@ -80,33 +80,41 @@ def place_order(request):
                 return JsonResponse({"error": "Cash on Delivery is not available for orders above ₹1000."}, status=400)
 
             if payment_method == "razorpay":
+                # Validate API keys
+                if not settings.RAZOR_KEY_ID or not settings.RAZOR_KEY_SECRET:
+                    return JsonResponse({"error": "Payment gateway not configured. Please contact support."}, status=503)
+                
                 try:
                     import razorpay
                 except ImportError as e:
                     return JsonResponse({"error": f"Payment gateway not available: {str(e)}"}, status=503)
-                client = razorpay.Client(auth=(settings.RAZOR_KEY_ID, settings.RAZOR_KEY_SECRET))
-                payment_amount = int(total * 100)
-                currency = "INR"
                 
-                payment_data = {
-                    "amount": payment_amount,
-                    "currency": currency,
-                    "payment_capture": "1"
-                }
-                
-                razorpay_order = client.order.create(data=payment_data)
-                razorpay_order_id = razorpay_order['id']
+                try:
+                    client = razorpay.Client(auth=(settings.RAZOR_KEY_ID, settings.RAZOR_KEY_SECRET))
+                    payment_amount = int(total * 100)
+                    currency = "INR"
+                    
+                    payment_data = {
+                        "amount": payment_amount,
+                        "currency": currency,
+                        "payment_capture": "1"
+                    }
+                    
+                    razorpay_order = client.order.create(data=payment_data)
+                    razorpay_order_id = razorpay_order['id']
 
-                context = {
-                    'razorpay_order_id': razorpay_order_id,
-                    'razorpay_merchant_key': settings.RAZOR_KEY_ID,
-                    'razorpay_amount': payment_amount,
-                    'currency': currency,
-                    'callback_url': "payment_success",  # URL to handle success
-                    'address_id': address_id,
-                    'payment_method': "razorpay",
-                }
-                return JsonResponse(context)
+                    context = {
+                        'razorpay_order_id': razorpay_order_id,
+                        'razorpay_merchant_key': settings.RAZOR_KEY_ID,
+                        'razorpay_amount': payment_amount,
+                        'currency': currency,
+                        'callback_url': "payment_success",  # URL to handle success
+                        'address_id': address_id,
+                        'payment_method': "razorpay",
+                    }
+                    return JsonResponse(context)
+                except Exception as e:
+                    return JsonResponse({"error": f"Failed to create payment order: {str(e)}"}, status=500)
 
             # Create Order for COD
             order = Order.objects.create(
@@ -197,6 +205,7 @@ def admin_order_details(request, order_id):
     }
     return render(request, 'admin/order_details_admin.html', context)
 
+@csrf_exempt
 @login_required
 def payment_success(request):
     if request.method == "POST":
@@ -206,11 +215,26 @@ def payment_success(request):
             razorpay_order_id = data.get('razorpay_order_id')
             razorpay_signature = data.get('razorpay_signature')
             address_id = data.get('address_id')
+            
+            # Validate required fields
+            if not razorpay_payment_id:
+                return JsonResponse({'error': 'Missing razorpay_payment_id'}, status=400)
+            if not razorpay_order_id:
+                return JsonResponse({'error': 'Missing razorpay_order_id'}, status=400)
+            if not razorpay_signature:
+                return JsonResponse({'error': 'Missing razorpay_signature'}, status=400)
+            if not address_id:
+                return JsonResponse({'error': 'Missing address_id'}, status=400)
+            
+            # Validate API keys
+            if not settings.RAZOR_KEY_ID or not settings.RAZOR_KEY_SECRET:
+                return JsonResponse({'error': 'Payment gateway not configured'}, status=503)
 
             try:
                 import razorpay
             except ImportError as e:
                 return JsonResponse({'error': f'Payment gateway not available: {str(e)}'}, status=503)
+            
             client = razorpay.Client(auth=(settings.RAZOR_KEY_ID, settings.RAZOR_KEY_SECRET))
             
             # Verify Signature
@@ -223,15 +247,27 @@ def payment_success(request):
             try:
                 client.utility.verify_payment_signature(params_dict)
             except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Payment signature verification failed: {str(e)}")
                 return JsonResponse({'error': f'Payment verification failed: {str(e)}'}, status=400)
 
             # Get User and Address
             user = request.user
-            address = Address.objects.get(id=address_id, user=user)
+            try:
+                address = Address.objects.get(id=address_id, user=user)
+            except Address.DoesNotExist:
+                return JsonResponse({'error': 'Address not found'}, status=404)
             
             # Calculate Total from Cart again to be safe
-            cart = Cart.objects.get(user=user)
-            cart_items = CartItem.objects.filter(cart=cart)
+            try:
+                cart = Cart.objects.get(user=user)
+                cart_items = CartItem.objects.filter(cart=cart)
+            except Cart.DoesNotExist:
+                return JsonResponse({'error': 'Cart not found'}, status=404)
+            
+            if not cart_items.exists():
+                return JsonResponse({'error': 'Cart is empty'}, status=400)
             
             total = Decimal('0.00')
             for item in cart_items:
@@ -255,27 +291,41 @@ def payment_success(request):
 
             # Create Order Items and Decrease Stock
             for item in cart_items:
-                size_variant = SizeVariant.objects.get(product=item.product, size=item.size)
-                size_variant.stock -= int(item.quantity)
-                size_variant.save()
+                try:
+                    size_variant = SizeVariant.objects.get(product=item.product, size=item.size)
+                    if size_variant.stock < item.quantity:
+                        # Rollback order if stock insufficient
+                        order.delete()
+                        return JsonResponse({'error': f'Insufficient stock for {item.product.name}'}, status=400)
+                    
+                    size_variant.stock -= int(item.quantity)
+                    size_variant.save()
 
-                price = item.product.offer if item.product.offer and item.product.offer > 0 else item.product.price
-                OrderItem.objects.create(
-                    order=order,
-                    product=item.product,
-                    quantity=item.quantity,
-                    price=price,
-                    size_variant=size_variant,
-                    status="Pending",
-                    discount=0.00
-                )
+                    price = item.product.offer if item.product.offer and item.product.offer > 0 else item.product.price
+                    OrderItem.objects.create(
+                        order=order,
+                        product=item.product,
+                        quantity=item.quantity,
+                        price=price,
+                        size_variant=size_variant,
+                        status="Pending",
+                        discount=0.00
+                    )
+                except SizeVariant.DoesNotExist:
+                    order.delete()
+                    return JsonResponse({'error': f'Size variant not found for {item.product.name}'}, status=404)
 
             # Clear Cart
             cart_items.delete()
 
             return JsonResponse({'success': 'Payment successful and order placed!'})
 
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON data'}, status=400)
         except Exception as e:
-            return JsonResponse({'error': str(e)}, status=400)
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Payment success error: {str(e)}", exc_info=True)
+            return JsonResponse({'error': f'Server error: {str(e)}'}, status=500)
             
-    return JsonResponse({'error': 'Invalid request'}, status=400)
+    return JsonResponse({'error': 'Invalid request method'}, status=400)

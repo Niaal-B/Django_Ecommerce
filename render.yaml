@@ -52,6 +52,10 @@ services:
         sync: false  # Set in Render dashboard (get from Cloudinary dashboard)
       - key: CLOUDINARY_API_SECRET
         sync: false  # Set in Render dashboard (get from Cloudinary dashboard)
+      - key: RAZOR_KEY_ID
+        sync: false  # Set in Render dashboard (get from Razorpay dashboard)
+      - key: RAZOR_KEY_SECRET
+        sync: false  # Set in Render dashboard (get from Razorpay dashboard)
 
 databases:
   - name: evara-postgres

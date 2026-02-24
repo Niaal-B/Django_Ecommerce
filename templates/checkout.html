@@ -459,12 +459,26 @@
               "name": "Evara Ecommerce",
               "description": "Order Payment",
               "order_id": response.data.razorpay_order_id,
-              "handler": function (response) {
+              "handler": function (razorpayResponse) {
+                // Razorpay response structure: {razorpay_payment_id, razorpay_order_id, razorpay_signature}
+                console.log("Razorpay Response:", razorpayResponse); // Debug log
+                
+                // Extract payment details
+                const paymentId = razorpayResponse.razorpay_payment_id;
+                const orderId = razorpayResponse.razorpay_order_id;
+                const signature = razorpayResponse.razorpay_signature;
+                
+                if (!paymentId || !orderId || !signature) {
+                  alert("Payment response incomplete. Please contact support.");
+                  console.error("Missing payment data:", razorpayResponse);
+                  return;
+                }
+                
                 // Payment Success - send data to server
                 axios.post("{% url 'payment_success' %}", {
-                  razorpay_payment_id: response.razorpay_payment_id,
-                  razorpay_order_id: response.razorpay_order_id,
-                  razorpay_signature: response.razorpay_signature,
+                  razorpay_payment_id: paymentId,
+                  razorpay_order_id: orderId,
+                  razorpay_signature: signature,
                   address_id: selectedAddressId
                 }, {
                   headers: {
@@ -473,6 +487,7 @@
                   }
                 })
                   .then(function (res) {
+                    console.log("Server Response:", res.data); // Debug log
                     if (res.data.success) {
                       window.location.href = "{% url 'order_success' %}";
                     } else {
@@ -480,7 +495,12 @@
                     }
                   })
                   .catch(function (err) {
-                    alert("Payment verification failed via server");
+                    console.error("Payment verification error:", err);
+                    if (err.response) {
+                      alert("Payment verification failed: " + (err.response.data.error || err.response.statusText));
+                    } else {
+                      alert("Payment verification failed via server. Please check your order status.");
+                    }
                   });
               },
               "prefill": {
@@ -496,7 +516,8 @@
             rzp1.open();
 
             rzp1.on('payment.failed', function (response) {
-              alert("Payment Failed: " + response.error.description);
+              console.error("Payment Failed:", response);
+              alert("Payment Failed: " + (response.error.description || response.error.reason || "Unknown error"));
             });
 
           } else if (response.data.success) {
