@@ -528,6 +528,8 @@
             console.warn("Could not extract phone number from address card:", e);
           }
 
+          console.log("Diagnostic Info - Razorpay Key Prefix from Server:", response.data.razorpay_key_prefix);
+          console.log("Diagnostic Info - Prefill Contact:", contactNumber);
           openRazorpayModal(response.data, selectedAddressId, csrftoken, contactNumber);
         } else if (response.data.success) {
           window.location.href = 'success';

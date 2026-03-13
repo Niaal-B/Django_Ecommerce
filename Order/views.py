@@ -111,6 +111,7 @@ def place_order(request):
                     context = {
                         'razorpay_order_id': razorpay_order_id,
                         'razorpay_merchant_key': settings.RAZOR_KEY_ID,
+                        'razorpay_key_prefix': (settings.RAZOR_KEY_ID or "")[:8],
                         'razorpay_amount': payment_amount,
                         'currency': currency,
                         'callback_url': "payment_success",  # URL to handle success
