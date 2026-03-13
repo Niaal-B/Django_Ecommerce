@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Reset Your Password - Evara</title>
+  <title>Verify Your Email - Evara</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f4f5f7; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f4f5f7; padding: 40px 0;">
@@ -23,34 +23,29 @@
           <!-- Body -->
           <tr>
             <td style="padding: 40px;">
-              <h2 style="margin: 0 0 8px; color: #253D4E; font-size: 22px; font-weight: 600;">Reset Your Password</h2>
+              <h2 style="margin: 0 0 8px; color: #253D4E; font-size: 22px; font-weight: 600;">Verify Your Email</h2>
               <p style="margin: 0 0 24px; color: #7E7E7E; font-size: 15px; line-height: 1.6;">
-                Hello <strong style="color: #253D4E;">{{ user.get_username }}</strong>, we received a request to reset the password for your account at {{ site_name }}.
+                Hi there! Use the verification code below to complete your registration on Evara.
               </p>
 
-              <!-- CTA Button -->
-              <div style="text-align: center; margin: 0 0 24px;">
-                <a href="{{ protocol }}://{{ domain }}{% url 'password_reset_confirm' uidb64=uid token=token %}"
-                   style="display: inline-block; background: linear-gradient(135deg, #3BB77E, #2a9d6a); color: #ffffff; text-decoration: none; padding: 14px 36px; border-radius: 8px; font-size: 16px; font-weight: 600; letter-spacing: 0.5px;">
-                  Reset Password
-                </a>
+              <!-- OTP Code -->
+              <div style="background-color: #f0faf5; border: 2px dashed #3BB77E; border-radius: 10px; padding: 24px; text-align: center; margin: 0 0 24px;">
+                <p style="margin: 0 0 8px; color: #7E7E7E; font-size: 13px; text-transform: uppercase; letter-spacing: 1px;">Your Verification Code</p>
+                <p style="margin: 0; color: #253D4E; font-size: 36px; font-weight: 700; letter-spacing: 8px; font-family: 'Courier New', monospace;">{{ otp }}</p>
               </div>
 
-              <p style="margin: 0 0 6px; color: #7E7E7E; font-size: 13px; line-height: 1.6;">
-                If the button doesn't work, copy and paste this link into your browser:
+              <p style="margin: 0 0 6px; color: #7E7E7E; font-size: 14px; line-height: 1.6;">
+                ⏱ This code will expire in <strong style="color: #253D4E;">5 minutes</strong>.
               </p>
-              <p style="margin: 0 0 24px; word-break: break-all;">
-                <a href="{{ protocol }}://{{ domain }}{% url 'password_reset_confirm' uidb64=uid token=token %}"
-                   style="color: #3BB77E; font-size: 13px; text-decoration: underline;">
-                  {{ protocol }}://{{ domain }}{% url 'password_reset_confirm' uidb64=uid token=token %}
-                </a>
+              <p style="margin: 0 0 24px; color: #7E7E7E; font-size: 14px; line-height: 1.6;">
+                If you didn't request this code, you can safely ignore this email.
               </p>
 
               <!-- Divider -->
               <hr style="border: none; border-top: 1px solid #ececec; margin: 24px 0;">
 
               <p style="margin: 0; color: #b0b0b0; font-size: 12px; line-height: 1.5;">
-                🔒 If you didn't request a password reset, you can safely ignore this email. Your password will remain unchanged.
+                For security, never share this code with anyone. Our team will never ask you for your OTP.
               </p>
             </td>
           </tr>
@@ -59,7 +54,7 @@
           <tr>
             <td style="background-color: #f9fafb; padding: 20px 40px; text-align: center; border-top: 1px solid #ececec;">
               <p style="margin: 0; color: #b0b0b0; font-size: 12px;">
-                &copy; 2026 Evara. All rights reserved.
+                &copy; {{ year }} Evara. All rights reserved.
               </p>
             </td>
           </tr>

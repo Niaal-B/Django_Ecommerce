@@ -6,9 +6,10 @@ import random
 from Home import views
 from django.contrib.auth import authenticate, login, logout
 from django.utils import timezone
-from datetime import timedelta
+from datetime import timedelta, datetime
 from django.http import JsonResponse
 from django.conf import settings
+from django.template.loader import render_to_string
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 import re
@@ -17,8 +18,12 @@ def generate_otp():
     return random.randint(100000, 999999)
 
 def send_otp_email(email, otp):
-    subject = 'Your OTP Code'
-    message = f'Your OTP code is: {otp}'
+    subject = 'Your Verification Code - Evara'
+    plain_text = f'Your OTP code is: {otp}. It will expire in 5 minutes.'
+    html_content = render_to_string('emails/otp_email.html', {
+        'otp': otp,
+        'year': datetime.now().year,
+    })
     try:
         from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "")
         api_key = getattr(settings, "SENDGRID_API_KEY", "")
@@ -37,7 +42,8 @@ def send_otp_email(email, otp):
                 from_email=from_email,
                 to_emails=email,
                 subject=subject,
-                plain_text_content=message,
+                plain_text_content=plain_text,
+                html_content=html_content,
             )
             response = sg.send(mail)
             if 200 <= response.status_code < 300:
