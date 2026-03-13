@@ -691,6 +691,7 @@
 
           // Enhanced diagnostic logging
           console.error("Razorpay Error Details:", {
+            full_error: JSON.stringify(response.error),
             code: response.error.code,
             description: response.error.description,
             source: response.error.source,
