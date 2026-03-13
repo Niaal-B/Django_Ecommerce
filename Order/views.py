@@ -81,11 +81,6 @@ def place_order(request):
                 
                 
                 try:
-                    # Diagnostic logging (Safe: only logs the prefix)
-                    key_id = settings.RAZOR_KEY_ID or ""
-                    key_type = "TEST" if key_id.startswith("rzp_test_") else "LIVE" if key_id.startswith("rzp_live_") else "UNKNOWN/EMPTY"
-                    print(f"DEBUG: Initializing Razorpay setup with {key_type} key (starts with: {key_id[:8]})")
-                    
                     client = razorpay.Client(auth=(settings.RAZOR_KEY_ID, settings.RAZOR_KEY_SECRET))
                     payment_amount = int(total * 100)
                     currency = "INR"
