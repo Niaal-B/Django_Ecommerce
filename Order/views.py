@@ -1,24 +1,19 @@
-from django.shortcuts import render, redirect,get_object_or_404
-from Account.models import Address
-from Cart.models import Cart, CartItem
-from decimal import Decimal
-from .models import Order,OrderItem
-from Products.models import Product,SizeVariant
-from django.contrib.auth.decorators import login_required
-import json
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
-from django.contrib.auth.decorators import user_passes_test
-from Adminauth.views import is_admin 
-from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
-
-
+from django.conf import settings
 from decimal import Decimal
 import json
-from django.http import JsonResponse
-from django.shortcuts import render
-from django.contrib.auth.decorators import login_required
+import razorpay
+import logging
+
+from Account.models import Address
+from Cart.models import Cart, CartItem
+from .models import Order, OrderItem
+from Products.models import Product, SizeVariant
+from Adminauth.views import is_admin 
 
 @login_required
 def place_order(request):
@@ -84,10 +79,6 @@ def place_order(request):
                 if not settings.RAZOR_KEY_ID or not settings.RAZOR_KEY_SECRET:
                     return JsonResponse({"error": "Payment gateway not configured. Please contact support."}, status=503)
                 
-                try:
-                    import razorpay
-                except ImportError as e:
-                    return JsonResponse({"error": f"Payment gateway not available: {str(e)}"}, status=503)
                 
                 try:
                     # Diagnostic logging (Safe: only logs the prefix)
@@ -254,7 +245,6 @@ def payment_success(request):
             if not settings.RAZOR_KEY_ID or not settings.RAZOR_KEY_SECRET:
                 return JsonResponse({'error': 'Payment gateway not configured'}, status=503)
 
-            import razorpay
             client = razorpay.Client(auth=(settings.RAZOR_KEY_ID, settings.RAZOR_KEY_SECRET))
             
             # Verify Signature
@@ -304,9 +294,7 @@ def payment_success(request):
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON data'}, status=400)
         except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Payment success error: {str(e)}", exc_info=True)
+            logging.error(f"Payment success error: {str(e)}", exc_info=True)
             if request.content_type == 'application/json':
                 return JsonResponse({'error': f'Payment verification failed: {str(e)}'}, status=400)
             return JsonResponse({'error': f'Server error: {str(e)}'}, status=500)
@@ -321,7 +309,6 @@ def razorpay_webhook(request):
         webhook_secret = settings.RAZOR_WEBHOOK_SECRET
         
         if not webhook_secret:
-            import logging
             logging.error("RAZOR_WEBHOOK_SECRET not set in settings")
             return JsonResponse({'error': 'Webhook secret not configured'}, status=500)
 
@@ -362,13 +349,11 @@ def razorpay_webhook(request):
                             pass
                             
                 except Order.DoesNotExist:
-                    import logging
                     logging.error(f"Order with razorpay_order_id {razorpay_order_id} not found during webhook")
             
             return JsonResponse({'status': 'ok'})
             
         except Exception as e:
-            import logging
             logging.error(f"Webhook processing error: {str(e)}", exc_info=True)
             return JsonResponse({'error': str(e)}, status=400)
             
