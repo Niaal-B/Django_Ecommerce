@@ -291,21 +291,6 @@
                 <h3 class="table__title">{{ item.product.name }}</h3>
                 <p class="table__quantity">x {{ item.quantity }}</p>
               </td>
-              <td><span class="table__price">₹{{ item.subtotal }}</span></td>
-            </tr>
-            {% endfor %}
-            </tr>
-            <tr>
-              <td><span class="order__subtitle">Shipping</span></td>
-              <td colspan="2">
-                <span class="table__price">{% if delivery_charge == 0 %}Free Shipping{% else %}₹40{% endif %} </span>
-              </td>
-            </tr>
-            <tr>
-              <td><span class="order__subtitle">Total</span></td>
-              <td colspan="2">
-                <span class="order__grand-total">{{total}}</span>
-              </td>
             </tr>
           </tbody>
         </table>

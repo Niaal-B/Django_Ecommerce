@@ -49,7 +49,7 @@ def place_order(request):
             total += item.subtotal
         
        
-        delivery_charge = Decimal('40.00') if total < Decimal('500.00') else Decimal('0.00')
+        delivery_charge = settings.DELIVERY_CHARGE if total < settings.FREE_SHIPPING_THRESHOLD else Decimal('0.00')
         total += delivery_charge
         
     except Cart.DoesNotExist:
@@ -71,8 +71,8 @@ def place_order(request):
             address = Address.objects.get(id=address_id, user=request.user)
             
             
-            if payment_method == 'COD' and total > 1000:
-                return JsonResponse({"error": "Cash on Delivery is not available for orders above ₹1000."}, status=400)
+            if payment_method == 'COD' and total > settings.MAX_COD_AMOUNT:
+                return JsonResponse({"error": f"Cash on Delivery is not available for orders above ₹{settings.MAX_COD_AMOUNT}."}, status=400)
 
             if payment_method == "razorpay":
                 # Validate API keys

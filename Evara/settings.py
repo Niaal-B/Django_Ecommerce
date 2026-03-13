@@ -2,6 +2,7 @@ from pathlib import Path
 import os
 from decouple import config  # Importing decouple to use config()
 import dj_database_url
+from decimal import Decimal
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -217,6 +218,11 @@ EMAIL_TIMEOUT = 10
 
 # SendGrid Web API key (for HTTP-based sending, not SMTP)
 SENDGRID_API_KEY = os.environ.get("SENDGRID_API_KEY", "")
+
+ITEMS_PER_PAGE = config('ITEMS_PER_PAGE', default=10, cast=int)
+FREE_SHIPPING_THRESHOLD = config('FREE_SHIPPING_THRESHOLD', default=Decimal('500.00'), cast=Decimal)
+DELIVERY_CHARGE = config('DELIVERY_CHARGE', default=Decimal('40.00'), cast=Decimal)
+MAX_COD_AMOUNT = config('MAX_COD_AMOUNT', default=Decimal('1000.00'), cast=Decimal)
 
 # Razorpay Configuration
 RAZOR_KEY_ID = os.environ.get('RAZOR_KEY_ID', config('RAZOR_KEY_ID', default=''))

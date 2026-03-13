@@ -2,6 +2,7 @@ from django.shortcuts import render
 from Products.models import Product
 from Categories.models import Category
 from django.core.paginator import Paginator
+from django.conf import settings
 
 # Create your views here.
 def shop(request):
@@ -40,8 +41,7 @@ def shop(request):
 
     products_count = products.count()
     
-
-    paginator = Paginator(products,10) 
+    paginator = Paginator(products, settings.ITEMS_PER_PAGE) 
     
 
     page_number = request.GET.get('page', 1)
