@@ -233,34 +233,28 @@ def admin_order_details(request, order_id):
 def payment_success(request):
     if request.method == "POST":
         # Handle both JSON (AJAX) and POST Form Data (Razorpay Callback)
-        if request.content_type == 'application/json':
-            try:
+        try:
+            if request.content_type == 'application/json':
                 data = json.loads(request.body)
-            except json.JSONDecodeError:
-                return JsonResponse({'error': 'Invalid JSON data'}, status=400)
-        else:
-            data = request.POST
+            else:
+                data = request.POST
 
-        razorpay_payment_id = data.get('razorpay_payment_id')
-        razorpay_order_id = data.get('razorpay_order_id')
-        razorpay_signature = data.get('razorpay_signature')
-        
-        # address_id might come from query param if we added it to callback_url
-        address_id = data.get('address_id') or request.GET.get('address_id')
-        
-        # Validate required fields
-        if not all([razorpay_payment_id, razorpay_order_id, razorpay_signature]):
-            return JsonResponse({'error': 'Missing required payment fields'}, status=400)
+            razorpay_payment_id = data.get('razorpay_payment_id')
+            razorpay_order_id = data.get('razorpay_order_id')
+            razorpay_signature = data.get('razorpay_signature')
             
+            # address_id might come from query param if we added it to callback_url
+            address_id = data.get('address_id') or request.GET.get('address_id')
+            
+            # Validate required fields
+            if not all([razorpay_payment_id, razorpay_order_id, razorpay_signature]):
+                return JsonResponse({'error': 'Missing required payment fields'}, status=400)
+
             # Validate API keys
             if not settings.RAZOR_KEY_ID or not settings.RAZOR_KEY_SECRET:
                 return JsonResponse({'error': 'Payment gateway not configured'}, status=503)
 
-            try:
-                import razorpay
-            except ImportError as e:
-                return JsonResponse({'error': f'Payment gateway not available: {str(e)}'}, status=503)
-            
+            import razorpay
             client = razorpay.Client(auth=(settings.RAZOR_KEY_ID, settings.RAZOR_KEY_SECRET))
             
             # Verify Signature
@@ -269,14 +263,7 @@ def payment_success(request):
                 'razorpay_payment_id': razorpay_payment_id,
                 'razorpay_signature': razorpay_signature
             }
-            
-            try:
-                client.utility.verify_payment_signature(params_dict)
-            except Exception as e:
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.error(f"Payment signature verification failed: {str(e)}")
-                return JsonResponse({'error': f'Payment verification failed: {str(e)}'}, status=400)
+            client.utility.verify_payment_signature(params_dict)
 
             # Find the existing pending order
             try:
@@ -320,8 +307,12 @@ def payment_success(request):
             import logging
             logger = logging.getLogger(__name__)
             logger.error(f"Payment success error: {str(e)}", exc_info=True)
+            if request.content_type == 'application/json':
+                return JsonResponse({'error': f'Payment verification failed: {str(e)}'}, status=400)
             return JsonResponse({'error': f'Server error: {str(e)}'}, status=500)
             
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
+
 @csrf_exempt
 def razorpay_webhook(request):
     if request.method == "POST":
