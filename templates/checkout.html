@@ -231,7 +231,8 @@
           <div class="saved__addresses">
             {% for address in addresses %}
             <div class="address__card">
-              <input type="radio" name="selected_address" id="address_{{ address.id }}" value="{{ address.id }}" {% if forloop.first %}checked{% endif %} class="address__input">
+              <input type="radio" name="selected_address" id="address_{{ address.id }}" value="{{ address.id }}" {% if
+                forloop.first %}checked{% endif %} class="address__input">
               <label for="address_{{ address.id }}" class="address__label">
                 <div class="address__content">
                   <h4 class="address__name">{{ address.name }}</h4>
@@ -411,35 +412,35 @@
 <script>
   // Function to load Razorpay script dynamically with error handling
   function loadRazorpayScript() {
-    return new Promise(function(resolve, reject) {
+    return new Promise(function (resolve, reject) {
       // Check if already loaded
       if (typeof Razorpay !== 'undefined') {
         console.log("Razorpay script already loaded");
         resolve();
         return;
       }
-      
+
       // Check if script tag already exists
       var existingScript = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
       if (existingScript) {
         // Wait for it to load
-        existingScript.onload = function() {
+        existingScript.onload = function () {
           if (typeof Razorpay !== 'undefined') {
             resolve();
           } else {
             reject(new Error("Razorpay script failed to load"));
           }
         };
-        existingScript.onerror = function() {
+        existingScript.onerror = function () {
           reject(new Error("Failed to load Razorpay script"));
         };
         return;
       }
-      
+
       var script = document.createElement('script');
       script.src = 'https://checkout.razorpay.com/v1/checkout.js';
       script.async = true;
-      script.onload = function() {
+      script.onload = function () {
         console.log("Razorpay script loaded successfully");
         if (typeof Razorpay !== 'undefined') {
           resolve();
@@ -447,22 +448,22 @@
           reject(new Error("Razorpay object not available after script load"));
         }
       };
-      script.onerror = function() {
+      script.onerror = function () {
         console.error("Failed to load Razorpay script");
         reject(new Error("Failed to load payment gateway"));
       };
       document.head.appendChild(script);
     });
   }
-  
+
   // Load Razorpay script when page loads
   var razorpayLoaded = false;
   loadRazorpayScript()
-    .then(function() {
+    .then(function () {
       razorpayLoaded = true;
       console.log("Razorpay ready");
     })
-    .catch(function(error) {
+    .catch(function (error) {
       console.error("Razorpay script loading error:", error);
       // Don't show alert on page load, only when user tries to pay
     });
@@ -507,19 +508,28 @@
           if (typeof Razorpay === 'undefined') {
             // Try to load script if not loaded
             loadRazorpayScript()
-              .then(function() {
+              .then(function () {
                 // Retry opening payment modal
                 openRazorpayModal(response.data, selectedAddressId, csrftoken);
               })
-              .catch(function(error) {
+              .catch(function (error) {
                 console.error("Failed to load Razorpay:", error);
                 alert("Payment gateway is not available. Please refresh the page and try again.");
               });
             return;
           }
-          
+
           // Open Razorpay modal
-          openRazorpayModal(response.data, selectedAddressId, csrftoken);
+          let contactNumber = '';
+          try {
+            const addressCard = document.querySelector(`input[name="selected_address"][value="${selectedAddressId}"]`).closest('.address__card');
+            const phoneText = addressCard.querySelector('.address__phone').textContent;
+            contactNumber = phoneText.replace('Phone:', '').trim();
+          } catch (e) {
+            console.warn("Could not extract phone number from address card:", e);
+          }
+
+          openRazorpayModal(response.data, selectedAddressId, csrftoken, contactNumber);
         } else if (response.data.success) {
           window.location.href = 'success';
         } else {
@@ -537,7 +547,7 @@
   }
 
   // Function to open Razorpay payment modal
-  function openRazorpayModal(responseData, selectedAddressId, csrftoken) {
+  function openRazorpayModal(responseData, selectedAddressId, csrftoken, prefillContact) {
     // Track whether we've already processed a successful payment to avoid duplicates
     let paymentProcessed = false;
     const currentPaymentOrderId = responseData.razorpay_order_id;
@@ -592,13 +602,13 @@
       console.error("Missing razorpay_order_id:", responseData);
       return;
     }
-    
+
     if (!responseData.razorpay_merchant_key) {
       alert("Payment gateway configuration error. Please contact support.");
       console.error("Missing razorpay_merchant_key:", responseData);
       return;
     }
-    
+
     if (!responseData.razorpay_amount) {
       alert("Payment amount error. Please try again.");
       console.error("Missing razorpay_amount:", responseData);
@@ -626,15 +636,15 @@
         processPaymentSuccess(razorpayResponse);
       },
       "prefill": {
-        "name": "{{ request.user.username }}",
-        "email": "{{ request.user.email }}",
-        "contact": "{{ request.user.phone_number }}"
+        "name": responseData.name || "{{ request.user.username }}",
+        "email": responseData.email || "{{ request.user.email }}",
+        "contact": prefillContact || ""
       },
       "theme": {
         "color": "#3399cc"
       },
       "modal": {
-        "ondismiss": function() {
+        "ondismiss": function () {
           console.log("Payment modal closed by user");
           // If payment wasn't processed, there is a chance the user closed the modal
           // after completing payment in a separate window (rare, but safer to hint)
@@ -646,12 +656,12 @@
         }
       }
     };
-    
+
     try {
       var rzp1 = new Razorpay(options);
-      
+
       // Add error handler for modal opening issues
-      rzp1.on('error', function(error) {
+      rzp1.on('error', function (error) {
         console.error("Razorpay error:", error);
         let errorMsg = "Payment gateway error: ";
         if (error.error) {
@@ -661,76 +671,44 @@
         }
         alert(errorMsg);
       });
-      
+
       // Open the payment modal
       rzp1.open();
-      
+
       // Note: ERR_BLOCKED_BY_CLIENT errors for lumberjack.razorpay.com and sentry-cdn.com
       // are from ad blockers and don't affect payment processing. They can be safely ignored.
-      
+
       rzp1.on('payment.failed', function (response) {
-        console.error("Payment Failed:", response);
+        console.error("Payment Failed event triggered:", response);
         let errorMsg = "Payment Failed: ";
-        let errorDetails = "";
-        
+
         if (response.error) {
-          // Extract detailed error information
-          if (response.error.description) {
-            errorDetails = response.error.description;
-            errorMsg += response.error.description;
-          } else if (response.error.reason) {
-            errorDetails = response.error.reason;
-            errorMsg += response.error.reason;
-          } else if (response.error.code) {
-            errorDetails = `Error Code: ${response.error.code}`;
-            errorMsg += errorDetails;
-          } else if (response.error.source) {
-            errorDetails = `Error from ${response.error.source}`;
-            errorMsg += errorDetails;
-          } else {
-            // Log full error for debugging
-            console.error("Full payment error:", JSON.stringify(response.error, null, 2));
-            errorDetails = "Unknown error occurred";
-            errorMsg += errorDetails;
-          }
-          
-          // Add error code if available
+          errorMsg += response.error.description || response.error.reason || "Unknown reason";
           if (response.error.code) {
-            errorMsg += ` (Code: ${response.error.code})`;
+            errorMsg += " (Code: " + response.error.code + ")";
           }
+
+          // Enhanced diagnostic logging
+          console.error("Razorpay Error Details:", {
+            code: response.error.code,
+            description: response.error.description,
+            source: response.error.source,
+            step: response.error.step,
+            reason: response.error.reason,
+            metadata: response.error.metadata
+          });
         } else {
-          errorDetails = "Unknown error occurred";
-          errorMsg += errorDetails;
-          console.error("Payment failed without error details:", response);
+          errorMsg += "The modal was closed or an unknown error occurred.";
         }
-        
-        // Show user-friendly error message
+
         alert(errorMsg);
-        
-        // Log for debugging
-        console.error("Payment failure details:", {
-          error: response.error,
-          metadata: response.metadata,
-          fullResponse: response
-        });
-        
-        // Suggest alternative payment methods for specific errors
-        if (errorDetails.toLowerCase().includes("wallet") || 
-            errorDetails.toLowerCase().includes("netbanking") || 
-            errorDetails.toLowerCase().includes("bank") ||
-            errorDetails.toLowerCase().includes("insufficient")) {
-          console.log("Wallet/Netbanking payment failed. Suggesting card payment.");
-          // Optionally show a more helpful message
-          setTimeout(function() {
-            if (confirm("This payment method failed. Would you like to try with a different payment method (e.g., Card)?")) {
-              // User can retry with different method
-              console.log("User wants to retry with different payment method");
-            }
-          }, 1000);
+
+        if (errorMsg.includes("netbanking") || errorMsg.includes("bank")) {
+          console.log("Suggestion: Try using HDFC or ICICI bank in test mode for better reliability.");
         }
       });
-      
-      rzp1.on('payment.authorized', function(response) {
+
+      rzp1.on('payment.authorized', function (response) {
         console.log("Payment authorized event:", response);
         // For some methods (like wallets), authorized can fire even if handler doesn't.
         if (!paymentProcessed && response && response.razorpay_payment_id) {
@@ -739,7 +717,7 @@
           processPaymentSuccess(response);
         }
       });
-      
+
     } catch (error) {
       console.error("Error initializing Razorpay:", error);
       alert("Error opening payment gateway. Please refresh the page and try again.");
@@ -760,10 +738,10 @@
       // If Razorpay payment and script not loaded, load it first
       if (paymentMethod === "razorpay" && typeof Razorpay === 'undefined') {
         loadRazorpayScript()
-          .then(function() {
+          .then(function () {
             proceedWithPayment(selectedAddressId, paymentMethod);
           })
-          .catch(function(error) {
+          .catch(function (error) {
             alert("Payment gateway is not available. Please refresh the page and try again.");
             console.error("Razorpay loading error:", error);
           });
