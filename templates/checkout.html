@@ -286,6 +286,33 @@
                 {% if item.product.image1 %}
                 <img src="{{ item.product.image1.url }}" alt="" class="order__img" />
                 {% endif %}
+              </td>
+              <td>
+                <h3 class="table__title">{{ item.product.name }}</h3>
+                <p class="table__quantity">x {{ item.quantity }}</p>
+              </td>
+              <td><span class="table__price">₹{{ item.subtotal }}</span></td>
+            </tr>
+            {% endfor %}
+            </tr>
+            <tr>
+              <td><span class="order__subtitle">Shipping</span></td>
+              <td colspan="2">
+                <span class="table__price">{% if delivery_charge == 0 %}Free Shipping{% else %}₹{{ delivery_charge|floatformat:0 }}{% endif %} </span>
+              </td>
+            </tr>
+            <tr>
+              <td><span class="order__subtitle">Total</span></td>
+              <td colspan="2">
+                <span class="order__grand-total">{{total}}</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="payment__methods">
+          <h3 class="checkout__title payment__title">Payment</h3>
+          <div class="payment__option flex">
+            <input type="radio" name="payment_method" value="COD" id="cod" class="payment__input" />
             <label for="l2" class="payment__label">Cash on Delivery</label>
           </div>
           <div class="payment__option flex">
