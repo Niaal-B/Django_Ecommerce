@@ -114,7 +114,6 @@ def place_order(request):
                         'razorpay_key_prefix': (settings.RAZOR_KEY_ID or "")[:12],
                         'razorpay_amount': payment_amount,
                         'currency': currency,
-                        'callback_url': "payment_success",  # URL to handle success
                         'address_id': address_id,
                         'payment_method': "razorpay",
                     }

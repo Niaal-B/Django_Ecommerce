@@ -697,6 +697,16 @@
             step: response.error.step,
             reason: response.error.reason,
             metadata: response.error.metadata
+            global_metadata: response.metadata
+          });
+
+          if (response.error.metadata && response.error.metadata.payment_id) {
+            console.warn("Payment ID found in failure metadata:", response.error.metadata.payment_id);
+            console.log("This suggests the payment was AUTHORIZED but the browser blocked the success handoff.");
+          }
+        } else {
+          errorMsg += "The modal was closed or an unknown error occurred.";
+        }
           });
         } else {
           errorMsg += "The modal was closed or an unknown error occurred.";
