@@ -624,18 +624,8 @@
       "name": "Evara Ecommerce",
       "description": "Order Payment",
       "order_id": responseData.razorpay_order_id,
-      "handler": function (razorpayResponse) {
-        // Razorpay response structure: {razorpay_payment_id, razorpay_order_id, razorpay_signature}
-        console.log("Razorpay Handler Response:", razorpayResponse); // Debug log
-
-        if (paymentProcessed) {
-          console.log("Payment already processed via another handler; ignoring duplicate.");
-          return;
-        }
-
-        paymentProcessed = true;
-        processPaymentSuccess(razorpayResponse);
-      },
+      "callback_url": window.location.origin + "/checkout/payment_success/?address_id=" + selectedAddressId,
+      "redirect": true,
       "prefill": {
         "name": responseData.name || "{{ request.user.username }}",
         "email": responseData.email || "{{ request.user.email }}",

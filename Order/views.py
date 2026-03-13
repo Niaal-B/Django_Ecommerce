@@ -108,17 +108,40 @@ def place_order(request):
                     razorpay_order = client.order.create(data=payment_data)
                     razorpay_order_id = razorpay_order['id']
 
+                    # Create Pending Order before returning to frontend
+                    order = Order.objects.create(
+                        user=user,
+                        address=address,
+                        payment_method="razorpay",
+                        total_price=total,
+                        payment_status="Pending",
+                        razorpay_order_id=razorpay_order_id
+                    )
+
+                    for item in cart_items:
+                        OrderItem.objects.create(
+                            order=order,
+                            product=item.product,
+                            quantity=item.quantity,
+                            price=item.product.offer if item.product.offer and item.product.offer > 0 else item.product.price,
+                            size_variant=SizeVariant.objects.get(product=item.product, size=item.size),
+                            status="Pending"
+                        )
+
                     context = {
                         'razorpay_order_id': razorpay_order_id,
                         'razorpay_merchant_key': settings.RAZOR_KEY_ID,
-                        'razorpay_key_prefix': (settings.RAZOR_KEY_ID or "")[:12],
                         'razorpay_amount': payment_amount,
                         'currency': currency,
                         'address_id': address_id,
                         'payment_method': "razorpay",
+                        'order_id': order.id # internal id for easier lookup
                     }
                     return JsonResponse(context)
                 except Exception as e:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.error(f"Failed to initiate Razorpay order: {str(e)}", exc_info=True)
                     return JsonResponse({"error": f"Failed to create payment order: {str(e)}"}, status=500)
 
             # Create Order for COD
@@ -129,18 +152,15 @@ def place_order(request):
                 total_price=total,
             )
 
-            
             for item in cart_items:
                 try:
                     size_variant = SizeVariant.objects.get(product=item.product, size=item.size)
                     if size_variant.stock < item.quantity:
                         return JsonResponse({"error": f"Not enough stock for {item.product.name} (Size: {item.size})."}, status=400)
 
-                  
                     size_variant.stock -= int(item.quantity)
                     size_variant.save()
 
-                   
                     price = item.product.offer if item.product.offer and item.product.offer > 0 else item.product.price
                     OrderItem.objects.create(
                         order=order,
@@ -152,9 +172,7 @@ def place_order(request):
                 except SizeVariant.DoesNotExist:
                     return JsonResponse({"error": f"Size variant not found for {item.product.name} (Size: {item.size})."}, status=400)
 
-           
             cart_items.delete()
-
             return JsonResponse({"success": "Order placed successfully!"}, status=200)
 
         except json.JSONDecodeError:
@@ -214,22 +232,25 @@ def admin_order_details(request, order_id):
 @login_required
 def payment_success(request):
     if request.method == "POST":
-        try:
-            data = json.loads(request.body)
-            razorpay_payment_id = data.get('razorpay_payment_id')
-            razorpay_order_id = data.get('razorpay_order_id')
-            razorpay_signature = data.get('razorpay_signature')
-            address_id = data.get('address_id')
-            
-            # Validate required fields
-            if not razorpay_payment_id:
-                return JsonResponse({'error': 'Missing razorpay_payment_id'}, status=400)
-            if not razorpay_order_id:
-                return JsonResponse({'error': 'Missing razorpay_order_id'}, status=400)
-            if not razorpay_signature:
-                return JsonResponse({'error': 'Missing razorpay_signature'}, status=400)
-            if not address_id:
-                return JsonResponse({'error': 'Missing address_id'}, status=400)
+        # Handle both JSON (AJAX) and POST Form Data (Razorpay Callback)
+        if request.content_type == 'application/json':
+            try:
+                data = json.loads(request.body)
+            except json.JSONDecodeError:
+                return JsonResponse({'error': 'Invalid JSON data'}, status=400)
+        else:
+            data = request.POST
+
+        razorpay_payment_id = data.get('razorpay_payment_id')
+        razorpay_order_id = data.get('razorpay_order_id')
+        razorpay_signature = data.get('razorpay_signature')
+        
+        # address_id might come from query param if we added it to callback_url
+        address_id = data.get('address_id') or request.GET.get('address_id')
+        
+        # Validate required fields
+        if not all([razorpay_payment_id, razorpay_order_id, razorpay_signature]):
+            return JsonResponse({'error': 'Missing required payment fields'}, status=400)
             
             # Validate API keys
             if not settings.RAZOR_KEY_ID or not settings.RAZOR_KEY_SECRET:
@@ -257,73 +278,41 @@ def payment_success(request):
                 logger.error(f"Payment signature verification failed: {str(e)}")
                 return JsonResponse({'error': f'Payment verification failed: {str(e)}'}, status=400)
 
-            # Get User and Address
-            user = request.user
+            # Find the existing pending order
             try:
-                address = Address.objects.get(id=address_id, user=user)
-            except Address.DoesNotExist:
-                return JsonResponse({'error': 'Address not found'}, status=404)
-            
-            # Calculate Total from Cart again to be safe
-            try:
-                cart = Cart.objects.get(user=user)
-                cart_items = CartItem.objects.filter(cart=cart)
-            except Cart.DoesNotExist:
-                return JsonResponse({'error': 'Cart not found'}, status=404)
-            
-            if not cart_items.exists():
-                return JsonResponse({'error': 'Cart is empty'}, status=400)
-            
-            total = Decimal('0.00')
-            for item in cart_items:
-                price = Decimal(str(item.product.offer if item.product.offer and item.product.offer > 0 else item.product.price))
-                item.subtotal = price * Decimal(str(item.quantity))
-                total += item.subtotal
+                order = Order.objects.get(razorpay_order_id=razorpay_order_id, user=request.user)
                 
-            delivery_charge = Decimal('40.00') if total < Decimal('500.00') else Decimal('0.00')
-            total += delivery_charge
+                # If already marked as Paid (e.g., by webhook), just redirect/success
+                if order.payment_status == "Paid":
+                    if request.content_type == 'application/json':
+                        return JsonResponse({'success': 'Order already processed'})
+                    return redirect('order_success')
 
-            # Create Order
-            order = Order.objects.create(
-                user=user,
-                address=address,
-                payment_method="razorpay",
-                total_price=total,
-                payment_status="Paid",
-                payment_id=razorpay_payment_id,
-                razorpay_order_id=razorpay_order_id
-            )
+                # Update Order to Paid
+                order.payment_status = "Paid"
+                order.payment_id = razorpay_payment_id
+                order.status = "completed"
+                order.save()
 
-            # Create Order Items and Decrease Stock
-            for item in cart_items:
+                # Deduct stock and finalize items
+                for item in order.items.all():
+                    if item.size_variant:
+                        item.size_variant.stock -= item.quantity
+                        item.size_variant.save()
+
+                # Clear User's Cart
                 try:
-                    size_variant = SizeVariant.objects.get(product=item.product, size=item.size)
-                    if size_variant.stock < item.quantity:
-                        # Rollback order if stock insufficient
-                        order.delete()
-                        return JsonResponse({'error': f'Insufficient stock for {item.product.name}'}, status=400)
-                    
-                    size_variant.stock -= int(item.quantity)
-                    size_variant.save()
+                    cart = Cart.objects.get(user=request.user)
+                    CartItem.objects.filter(cart=cart).delete()
+                except Cart.DoesNotExist:
+                    pass
 
-                    price = item.product.offer if item.product.offer and item.product.offer > 0 else item.product.price
-                    OrderItem.objects.create(
-                        order=order,
-                        product=item.product,
-                        quantity=item.quantity,
-                        price=price,
-                        size_variant=size_variant,
-                        status="Pending",
-                        discount=0.00
-                    )
-                except SizeVariant.DoesNotExist:
-                    order.delete()
-                    return JsonResponse({'error': f'Size variant not found for {item.product.name}'}, status=404)
+                if request.content_type == 'application/json':
+                    return JsonResponse({'success': 'Payment successful and order placed!'})
+                return redirect('order_success')
 
-            # Clear Cart
-            cart_items.delete()
-
-            return JsonResponse({'success': 'Payment successful and order placed!'})
+            except Order.DoesNotExist:
+                return JsonResponse({'error': 'Order not found'}, status=404)
 
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON data'}, status=400)
@@ -332,5 +321,64 @@ def payment_success(request):
             logger = logging.getLogger(__name__)
             logger.error(f"Payment success error: {str(e)}", exc_info=True)
             return JsonResponse({'error': f'Server error: {str(e)}'}, status=500)
+            
+@csrf_exempt
+def razorpay_webhook(request):
+    if request.method == "POST":
+        # Get the webhook signature from the headers
+        webhook_signature = request.headers.get('X-Razorpay-Signature')
+        webhook_secret = settings.RAZOR_WEBHOOK_SECRET
+        
+        if not webhook_secret:
+            import logging
+            logging.error("RAZOR_WEBHOOK_SECRET not set in settings")
+            return JsonResponse({'error': 'Webhook secret not configured'}, status=500)
+
+        client = razorpay.Client(auth=(settings.RAZOR_KEY_ID, settings.RAZOR_KEY_SECRET))
+        
+        try:
+            # Verify the webhook signature
+            payload = request.body.decode('utf-8')
+            client.utility.verify_webhook_signature(payload, webhook_signature, webhook_secret)
+            
+            data = json.loads(payload)
+            event = data.get('event')
+            
+            # Handle payment.captured or order.paid
+            if event in ['payment.captured', 'order.paid']:
+                payment_id = data['payload']['payment']['entity']['id']
+                razorpay_order_id = data['payload']['payment']['entity']['order_id']
+                
+                try:
+                    order = Order.objects.get(razorpay_order_id=razorpay_order_id)
+                    if order.payment_status != "Paid":
+                        order.payment_status = "Paid"
+                        order.payment_id = payment_id
+                        order.status = "completed"
+                        order.save()
+                        
+                        # Decrease stock for items in this order
+                        for item in order.items.all():
+                            if item.size_variant:
+                                item.size_variant.stock -= item.quantity
+                                item.size_variant.save()
+                        
+                        # Clear cart for the user who placed the order
+                        try:
+                            cart = Cart.objects.get(user=order.user)
+                            CartItem.objects.filter(cart=cart).delete()
+                        except Cart.DoesNotExist:
+                            pass
+                            
+                except Order.DoesNotExist:
+                    import logging
+                    logging.error(f"Order with razorpay_order_id {razorpay_order_id} not found during webhook")
+            
+            return JsonResponse({'status': 'ok'})
+            
+        except Exception as e:
+            import logging
+            logging.error(f"Webhook processing error: {str(e)}", exc_info=True)
+            return JsonResponse({'error': str(e)}, status=400)
             
     return JsonResponse({'error': 'Invalid request method'}, status=400)
