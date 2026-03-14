@@ -213,7 +213,7 @@ def admin_order_details(request, order_id):
         
         from django.contrib import messages
         messages.success(request, f"Order #{order.id} statuses updated successfully.")
-        return redirect('admin_order_details', order_id=order.id)
+        return redirect('order-view', order_id=order.id)
 
     order_items = order.items.all()
     for items in order_items:
