@@ -85,67 +85,70 @@
                                         <i class="mdi mdi-arrow-left"></i> Go Back
                                     </a>
 
-                                    <div class="row">
-                                        <!-- Order Information Card -->
-                                        <div class="col-md-6">
-                                            <div class="card mt-4">
-                                                <div class="card-body">
-                                                    <h4>Order Information</h4>
-                                                    <p><strong>Order ID:</strong> {{ order.id }}</p>
-                                                    <p><strong>Payment Type:</strong> {{ order.payment_method }}</p>
-                                                    <p><strong>Order Status:</strong> {{ order.status }}</p>
-                                                    <p><strong>Total Price:</strong> {{ order.total_price }}</p>
-                                                    <p><strong>Created At:</strong> {{ order.created_at }}</p>
+                                    <form method="POST" action="">
+                                        {% csrf_token %}
+                                        <div class="row">
+                                            <!-- Order Information Card -->
+                                            <div class="col-md-6">
+                                                <div class="card mt-4">
+                                                    <div class="card-body">
+                                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                                            <h4>Order Information</h4>
+                                                        </div>
+                                                        <p><strong>Order ID:</strong> #{{ order.id }}</p>
+                                                        <p><strong>Payment Type:</strong> {{ order.payment_method|upper }}</p>
+                                                        <p>
+                                                            <strong>Update Order Status:</strong>
+                                                            <select name="order_status" class="form-control mt-2" style="max-width: 200px; display: inline-block;">
+                                                                {% for key, label in order.ORDER_STATUS_CHOICES %}
+                                                                <option value="{{ key }}" {% if order.status == key %}selected{% endif %}>{{ label }}</option>
+                                                                {% endfor %}
+                                                            </select>
+                                                        </p>
+                                                        <p><strong>Payment Status:</strong> {{ order.payment_status }}</p>
+                                                        <p><strong>Total Price:</strong> ₹{{ order.total_price }}</p>
+                                                        <p><strong>Created At:</strong> {{ order.created_at|date:"M d, Y H:i" }}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Shipping Address Card -->
+                                            <div class="col-md-6">
+                                                <div class="card mt-4">
+                                                    <div class="card-body">
+                                                        <h4>Shipping Address</h4>
+                                                        <p><strong>Name:</strong> {{ order.address.name }}</p>
+                                                        <p><strong>Phone Number:</strong> {{ order.address.phone }}</p>
+                                                        <p><strong>Pin Code:</strong> {{ order.address.postcode }}</p>
+                                                        <p><strong>Country:</strong> {{ order.address.country }}</p>
+                                                        <p><strong>District:</strong> {{ order.address.city }}</p>
+                                                        <p><strong>Address:</strong> {{ order.address.address }}</p>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        <!-- Shipping Address Card -->
-                                        <div class="col-md-6">
-                                            <div class="card mt-4">
-                                                <div class="card-body">
-                                                    <h4>Shipping Address</h4>
-                                                    <p><strong>Name:</strong> {{ order.address.name }}</p>
-                                                    <p><strong>Phone Number:</strong> {{ order.address.phone }}</p>
-                                                    <p><strong>Pin Code:</strong> {{ order.address.postcode }}</p>
-
-                                                    <p><strong>Country:</strong> {{ order.address.country }}</p>
-                                                    <p><strong>District:</strong> {{ order.address.city }}</p>
-                                                    <p><strong>Address:</strong> {{ order.address.address }}</p>
-
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Product Details Card -->
-                                    <div class="card mt-4">
-                                        <div class="card-body">
-                                            <h4>Product Details</h4>
-                                            <form method="POST" action="">
-                                                {% csrf_token %}
+                                        <!-- Product Details Card -->
+                                        <div class="card mt-4">
+                                            <div class="card-body">
+                                                <h4>Product Details</h4>
                                                 <table class="table table-striped">
                                                     <thead>
                                                         <tr>
                                                             <th>Product Name</th>
                                                             <th>Quantity</th>
                                                             <th>Price</th>
-                                                            <th>Status</th>
-                                                            {% if item.status == "Requested Return" %}
-
-                                                            {% else %}
-                                                            <th>Message</th>
-                                                            {% endif %}
+                                                            <th>Item Status Update</th>
                                                             <th>Subtotal</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
                                                         {% for item in order_items %}
                                                         <tr>
-                                                            <td>{{ item.product }}</td>
+                                                            <td>{{ item.product.name }}</td>
                                                             <td>{{ item.quantity }}</td>
                                                             <td>₹{{ item.price }}</td>
-                                                            <td>{{item.order.status}}</td>
+                                                            <td>{{ item.status }}</td>
                                                             <td>
                                                                 <select class="form-control"
                                                                     name="status_{{ item.id }}">
@@ -189,21 +192,6 @@
                                                                     {% endif %}
                                                                 </select>
                                                             </td>
-                                                            {% if item.status == "Requested Return" %}
-                                                            <td>
-                                                                <!-- Red circle with twinkling effect -->
-
-                                                                <strong class="twinkle-text">{{ item.return_reason
-                                                                    }}</strong>
-                                                            </td>
-                                                            {% else %}
-                                                            <td>
-                                                                <!-- Red circle with twinkling effect -->
-
-                                                                <strong class="twinkle-text"></strong>
-                                                            </td>
-                                                            {% endif %}
-
                                                             <td>₹{{ item.subtotal }}</td>
                                                         </tr>
                                                         {% endfor %}

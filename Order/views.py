@@ -192,6 +192,13 @@ def admin_order_details(request, order_id):
     order = get_object_or_404(Order, id=order_id)
 
     if request.method == "POST":
+        # Handle overall Order status
+        order_status = request.POST.get("order_status")
+        if order_status:
+            order.status = order_status
+            order.save()
+            
+        # Handle individual OrderItem statuses
         for key, value in request.POST.items():
             if key.startswith("status_"):
                 try:
@@ -279,7 +286,7 @@ def payment_success(request):
                 except Cart.DoesNotExist:
                     pass
 
-                if request.content_type == 'application/json':
+                if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.content_type == 'application/json':
                     return JsonResponse({'success': 'Payment successful and order placed!'})
                 return redirect('order_success')
 
