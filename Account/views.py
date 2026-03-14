@@ -25,32 +25,58 @@ def account(request):
 
 
 @login_required
-def update_username(request):
+def update_profile(request):
     if request.method == 'POST':
         username = request.POST.get('username')
+        first_name = request.POST.get('first_name')
+        last_name = request.POST.get('last_name')
         user = request.user
 
+        errors = False
         
-        if len(username) < 3 or len(username) > 30:
+        # Username validation
+        if not username:
+            messages.error(request, 'Username is required.')
+            errors = True
+        elif len(username) < 3 or len(username) > 30:
             messages.error(request, 'Username must be between 3 and 30 characters.')
+            errors = True
         elif not username.isalnum():
             messages.error(request, 'Username can only contain alphanumeric characters.')
-        elif User.objects.filter(username=username).exists():
+            errors = True
+        elif User.objects.filter(username=username).exclude(id=user.id).exists():
             messages.error(request, 'Username already taken.')
-        else:
+            errors = True
+
+        # First name validation
+        if not first_name or len(first_name) < 2:
+            messages.error(request, 'First name must be at least 2 characters long.')
+            errors = True
+        elif not re.match(r"^[a-zA-Z\s-]+$", first_name):
+            messages.error(request, 'First name can only contain letters, spaces, and hyphens.')
+            errors = True
+
+        # Last name validation
+        if not last_name or len(last_name) < 2:
+            messages.error(request, 'Last name must be at least 2 characters long.')
+            errors = True
+        elif not re.match(r"^[a-zA-Z\s-]+$", last_name):
+            messages.error(request, 'Last name can only contain letters, spaces, and hyphens.')
+            errors = True
+
+        if not errors:
             try:
-                validator = RegexValidator(r'^[a-zA-Z0-9]*$', 'Username must be alphanumeric.')
-                validator(username)
-                
                 user.username = username
+                user.first_name = first_name
+                user.last_name = last_name
                 user.save()
-                messages.success(request, 'Username updated successfully!')
-                return redirect('update_username')
+                messages.success(request, 'Profile updated successfully!')
+                return redirect('account')
 
-            except ValidationError as e:
-                messages.error(request, f'Invalid username: {e.message}')
+            except Exception as e:
+                messages.error(request, f'An error occurred: {str(e)}')
 
-    return render(request, 'accounts.html')
+    return redirect('account')
 
 
 

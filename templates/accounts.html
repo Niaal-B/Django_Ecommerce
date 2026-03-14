@@ -114,8 +114,12 @@
         <div class="tab__content" content id="update-profile">
           <h3 class="tab__header">Update Profile</h3>
           <div class="tab__body">
-            <form class="form grid" method="POST" action="{% url 'update_username' %}">
+            <form class="form grid" method="POST" action="{% url 'update_profile' %}">
               {% csrf_token %}
+              <input type="text" name="first_name" placeholder="First Name" class="form__input"
+                value="{{ user.first_name }}" />
+              <input type="text" name="last_name" placeholder="Last Name" class="form__input"
+                value="{{ user.last_name }}" />
               <input type="text" name="username" placeholder="Username" class="form__input"
                 value="{{ user.username }}" />
               <div class="form__btn">
