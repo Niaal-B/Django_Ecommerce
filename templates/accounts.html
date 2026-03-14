@@ -116,12 +116,21 @@
           <div class="tab__body">
             <form class="form grid" method="POST" action="{% url 'update_profile' %}">
               {% csrf_token %}
-              <input type="text" name="first_name" placeholder="First Name" class="form__input"
-                value="{{ user.first_name }}" />
-              <input type="text" name="last_name" placeholder="Last Name" class="form__input"
-                value="{{ user.last_name }}" />
-              <input type="text" name="username" placeholder="Username" class="form__input"
-                value="{{ user.username }}" />
+              <div class="form__group">
+                <label for="first_name">First Name</label>
+                <input type="text" id="first_name" name="first_name" placeholder="First Name" class="form__input"
+                  value="{{ user.first_name }}" />
+              </div>
+              <div class="form__group">
+                <label for="last_name">Last Name</label>
+                <input type="text" id="last_name" name="last_name" placeholder="Last Name" class="form__input"
+                  value="{{ user.last_name }}" />
+              </div>
+              <div class="form__group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" placeholder="Username" class="form__input"
+                  value="{{ user.username }}" />
+              </div>
               <div class="form__btn">
                 <button type="submit" class="btn btn--md">Save</button>
               </div>
