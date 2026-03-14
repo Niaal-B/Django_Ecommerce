@@ -108,6 +108,12 @@
                                                             <br><small class="text-muted">Updating this will sync all items below.</small>
                                                         </p>
                                                         <p><strong>Payment Status:</strong> {{ order.payment_status }}</p>
+                                                        {% if order.return_reason %}
+                                                        <div class="alert alert-warning mt-3">
+                                                            <strong>Return Reason:</strong><br>
+                                                            {{ order.return_reason }}
+                                                        </div>
+                                                        {% endif %}
                                                         <p><strong>Total Price:</strong> ₹{{ order.total_price }}</p>
                                                         <p><strong>Created At:</strong> {{ order.created_at|date:"M d, Y H:i" }}</p>
                                                     </div>
