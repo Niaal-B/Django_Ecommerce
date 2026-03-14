@@ -149,28 +149,22 @@
                                                             <td>
                                                                 <select class="form-control"
                                                                     name="status_{{ item.id }}">
-                                                                    {% if item.status == "Pending" or item.status == "pending" %}
-                                                                    <option value="pending" selected>Order Pending
-                                                                    </option>
-                                                                    <option value="Order confirmed">Order confirmed
-                                                                    </option>
+                                                                    {% if item.status == "pending" or item.status == "Pending" %}
+                                                                    <option value="pending" selected>Order Pending</option>
+                                                                    <option value="confirmed">Confirmed</option>
                                                                     <option value="Shipped">Shipped</option>
-                                                                    <option value="Out For Delivery">Out For Delivery
-                                                                    </option>
+                                                                    <option value="Out For Delivery">Out For Delivery</option>
                                                                     <option value="Delivered">Delivered</option>
                                                                     <option value="Cancelled">Cancelled</option>
-                                                                    {% elif item.status == "Order confirmed" %}
-                                                                    <option value="Order confirmed" selected>Order
-                                                                        confirmed</option>
+                                                                    {% elif item.status == "confirmed" or item.status == "Confirmed" or item.status == "Order confirmed" %}
+                                                                    <option value="confirmed" selected>Confirmed</option>
                                                                     <option value="Shipped">Shipped</option>
-                                                                    <option value="Out For Delivery">Out For Delivery
-                                                                    </option>
+                                                                    <option value="Out For Delivery">Out For Delivery</option>
                                                                     <option value="Delivered">Delivered</option>
                                                                     <option value="Cancelled">Cancelled</option>
                                                                     {% elif item.status == "Shipped" %}
                                                                     <option value="Shipped" selected>Shipped</option>
-                                                                    <option value="Out For Delivery">Out For Delivery
-                                                                    </option>
+                                                                    <option value="Out For Delivery">Out For Delivery</option>
                                                                     <option value="Delivered">Delivered</option>
                                                                     <option value="Cancelled">Cancelled</option>
                                                                     {% elif item.status == "Out For Delivery" %}

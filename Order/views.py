@@ -260,10 +260,10 @@ def payment_success(request):
                         return JsonResponse({'success': 'Order already processed'})
                     return redirect('order_success')
 
-                # Update Order to Paid
+                # Update Order to Confirmed
                 order.payment_status = "Paid"
                 order.payment_id = razorpay_payment_id
-                order.status = "completed"
+                order.status = "confirmed"
                 order.save()
 
                 # Deduct stock and finalize items
@@ -327,7 +327,7 @@ def razorpay_webhook(request):
                     if order.payment_status != "Paid":
                         order.payment_status = "Paid"
                         order.payment_id = payment_id
-                        order.status = "completed"
+                        order.status = "confirmed"
                         order.save()
                         
                         # Decrease stock for items in this order

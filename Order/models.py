@@ -9,15 +9,19 @@ from Account.models import Address  # Import Address model
 class Order(models.Model):
     ORDER_STATUS_CHOICES = [
         ('pending', 'Pending'),
-        ('completed', 'Completed'),
+        ('confirmed', 'Confirmed'),
+        ('shipped', 'Shipped'),
+        ('out_for_delivery', 'Out For Delivery'),
+        ('delivered', 'Delivered'),
         ('canceled', 'Canceled'),
+        ('returned', 'Returned'),
     ]
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     address = models.ForeignKey(Address, on_delete=models.SET_NULL, null=True)
     payment_method = models.CharField(max_length=20)
     total_price = models.DecimalField(max_digits=10, decimal_places=2)
-    status = models.CharField(max_length=10, choices=ORDER_STATUS_CHOICES, default='pending')
+    status = models.CharField(max_length=20, choices=ORDER_STATUS_CHOICES, default='pending')
     payment_status = models.CharField(max_length=10, default="Pending")
     payment_id = models.CharField(max_length=100, blank=True, null=True)
     razorpay_order_id = models.CharField(max_length=100, blank=True, null=True)
