@@ -97,14 +97,18 @@
                 <tr>
                   <td>#{{order.id}}</td>
                   <td>{{ order.created_at|date:"M d, Y" }}</td>
-                  <td>{{order.status}}</td>
-                  <td>{{order.total_price}}</td>
+                  <td>{{order.get_status_display}}</td>
+                  <td>₹{{order.total_price}}</td>
                   <td><a href="{% url 'view_order_items' order.id %}" class="view__order">View</a></td>
-                  {% if order.status != 'Canceled' %}
-                  <td><a href="{% url 'cancel_order' order.id %}" class="view__order">Cancel</a></td>
-                  {% else %}
-                  <td><a href="{% url 'cancel_order' order.id %}" class="view__order">Cancelled</a></td>
-                  {% endif %}
+                  <td>
+                    {% if order.is_cancellable %}
+                      <a href="{% url 'cancel_order' order.id %}" class="view__order" onclick="return confirm('Are you sure you want to cancel this order?')">Cancel Order</a>
+                    {% elif order.status == 'canceled' %}
+                      <span style="color: #ff4d4d;">Cancelled</span>
+                    {% else %}
+                      <span style="color: #666;">In Progress</span>
+                    {% endif %}
+                  </td>
                 </tr>
                 {% endfor %}
               </tbody>

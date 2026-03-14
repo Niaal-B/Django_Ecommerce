@@ -243,20 +243,24 @@ def view_order_items(request,order_id):
 def cancel_order(request, order_id):
     order = get_object_or_404(Order, id=order_id, user=request.user)
 
-    if order.status == 'Canceled':
-        messages.error(request, "This order is already canceled.")
-        return redirect('account') 
+    if not order.is_cancellable:
+        if order.status == 'canceled':
+            messages.error(request, "This order is already canceled.")
+        else:
+            messages.error(request, f"Cannot cancel order in '{order.get_status_display()}' status.")
+        return redirect('account')
 
-
-    order_items = OrderItem.objects.filter(order=order)
+    # Restore stock
+    order_items = order.items.all()
     for item in order_items:
-        size_variant = item.size_variant
-        size_variant.stock += item.quantity
-        size_variant.save()
+        if item.size_variant:
+            item.size_variant.stock += item.quantity
+            item.size_variant.save()
 
-
-    order.status = 'Canceled'
+    # Update status and sync items
+    order.status = 'canceled'
     order.save()
+    order.sync_items_status()
 
     messages.success(request, "Order has been successfully canceled.")
     return redirect('account')

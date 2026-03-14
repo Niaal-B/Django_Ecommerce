@@ -22,7 +22,7 @@ class Order(models.Model):
     payment_method = models.CharField(max_length=20)
     total_price = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(max_length=50, choices=ORDER_STATUS_CHOICES, default='pending')
-    payment_status = models.CharField(max_length=50, default="Pending")
+    payment_status = models.CharField(max_length=50, default="pending")
     payment_id = models.CharField(max_length=100, blank=True, null=True)
     razorpay_order_id = models.CharField(max_length=100, blank=True, null=True)
     return_reason = models.TextField(blank=True, null=True)
@@ -30,6 +30,16 @@ class Order(models.Model):
     discount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def is_cancellable(self):
+        """Returns True if the order can be canceled by the user."""
+        return self.status in ['pending', 'confirmed']
+
+    def sync_items_status(self, new_status=None):
+        """Synchronizes all OrderItems with the Order's status or a specific status."""
+        target_status = new_status if new_status else self.status
+        self.items.all().update(status=target_status)
 
     def __str__(self):
         return f"Order #{self.id} - {self.user.username}"

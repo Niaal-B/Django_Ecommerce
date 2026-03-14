@@ -100,7 +100,7 @@ def place_order(request):
                         address=address,
                         payment_method="razorpay",
                         total_price=total,
-                        payment_status="Pending",
+                        payment_status="pending",
                         razorpay_order_id=razorpay_order_id
                     )
 
@@ -111,7 +111,7 @@ def place_order(request):
                             quantity=item.quantity,
                             price=item.product.offer if item.product.offer and item.product.offer > 0 else item.product.price,
                             size_variant=SizeVariant.objects.get(product=item.product, size=item.size),
-                            status="Pending"
+                            status="pending"
                         )
 
                     context = {
@@ -198,7 +198,7 @@ def admin_order_details(request, order_id):
             order.status = order_status
             order.save()
             # Sync all items to the new order status
-            order.items.all().update(status=order_status)
+            order.sync_items_status()
             
         # Handle individual OrderItem statuses (these act as overrides)
         for key, value in request.POST.items():
@@ -273,10 +273,11 @@ def payment_success(request):
                     return redirect('order_success')
 
                 # Update Order to Confirmed
-                order.payment_status = "Paid"
+                order.payment_status = "paid"
                 order.payment_id = razorpay_payment_id
                 order.status = "confirmed"
                 order.save()
+                order.sync_items_status()
 
                 # Deduct stock and finalize items
                 for item in order.items.all():
@@ -336,11 +337,12 @@ def razorpay_webhook(request):
                 
                 try:
                     order = Order.objects.get(razorpay_order_id=razorpay_order_id)
-                    if order.payment_status != "Paid":
-                        order.payment_status = "Paid"
+                    if order.payment_status != "paid":
+                        order.payment_status = "paid"
                         order.payment_id = payment_id
                         order.status = "confirmed"
                         order.save()
+                        order.sync_items_status()
                         
                         # Decrease stock for items in this order
                         for item in order.items.all():
