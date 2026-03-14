@@ -264,3 +264,29 @@ def cancel_order(request, order_id):
 
     messages.success(request, "Order has been successfully canceled.")
     return redirect('account')
+
+@login_required
+def return_order(request, order_id):
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+
+    if request.method == 'POST':
+        if not order.is_returnable:
+            messages.error(request, "This order cannot be returned.")
+            return redirect('account')
+
+        return_reason = request.POST.get('return_reason')
+        if not return_reason:
+            messages.error(request, "Please provide a reason for return.")
+            return redirect('account')
+
+        order.status = 'returned'
+        order.return_reason = return_reason
+        order.save()
+        
+        # Sync all items to 'returned' status
+        order.sync_items_status()
+
+        messages.success(request, f"Return request for Order #{order.id} has been submitted.")
+        return redirect('account')
+
+    return redirect('account')

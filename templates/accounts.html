@@ -103,8 +103,12 @@
                   <td>
                     {% if order.is_cancellable %}
                       <a href="{% url 'cancel_order' order.id %}" class="view__order" onclick="return confirm('Are you sure you want to cancel this order?')">Cancel Order</a>
+                    {% elif order.is_returnable %}
+                      <a href="javascript:void(0)" class="view__order" onclick="openReturnModal('{{ order.id }}')" style="color: #ff9900;">Return Product</a>
                     {% elif order.status == 'canceled' %}
                       <span style="color: #ff4d4d;">Cancelled</span>
+                    {% elif order.status == 'returned' %}
+                      <span style="color: #ff9900;">Returned</span>
                     {% else %}
                       <span style="color: #666;">In Progress</span>
                     {% endif %}
@@ -342,6 +346,40 @@
       passwordFields.forEach(field => {
         field.type = this.checked ? 'text' : 'password';
       });
+    });
+  </script>
+
+  <!-- Return Order Modal -->
+  <div id="returnModal" class="modal">
+    <div class="modal__content">
+      <span class="modal__close" onclick="document.getElementById('returnModal').style.display = 'none'">&times;</span>
+      <h3 class="modal__header">Return Order</h3>
+      <form id="returnForm" method="POST" action="">
+        {% csrf_token %}
+        <div class="form__group">
+          <label for="return_reason">Reason for Return</label>
+          <textarea name="return_reason" id="return_reason" class="form__input" style="height: 100px;" required placeholder="Please describe why you are returning this order..."></textarea>
+        </div>
+        <div class="form__btn" style="margin-top: 20px;">
+          <button type="submit" class="btn btn--md">Submit Return Request</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    function openReturnModal(orderId) {
+      const modal = document.getElementById('returnModal');
+      const form = document.getElementById('returnForm');
+      form.action = `/account/return-order/${orderId}/`;
+      modal.style.display = 'block';
+    }
+
+    window.addEventListener('click', (event) => {
+      const modal = document.getElementById('returnModal');
+      if (event.target === modal) {
+        modal.style.display = 'none';
+      }
     });
   </script>
   {% endblock %}

@@ -35,6 +35,10 @@ class Order(models.Model):
     def is_cancellable(self):
         """Returns True if the order can be canceled by the user."""
         return self.status in ['pending', 'confirmed']
+    @property
+    def is_returnable(self):
+        """Returns True if the order can be returned by the user (only if delivered)."""
+        return self.status == 'delivered'
 
     def sync_items_status(self, new_status=None):
         """Synchronizes all OrderItems with the Order's status or a specific status."""
