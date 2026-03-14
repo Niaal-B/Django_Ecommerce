@@ -199,17 +199,18 @@ def admin_order_details(request, order_id):
             order.save()
             # Sync all items to the new order status
             order.sync_items_status()
-            
-        # Handle individual OrderItem statuses (these act as overrides)
-        for key, value in request.POST.items():
-            if key.startswith("status_"):
-                try:
-                    item_id = key.split("_")[1]
-                    item = OrderItem.objects.get(id=item_id, order=order)
-                    item.status = value
-                    item.save()
-                except (IndexError, OrderItem.DoesNotExist, ValueError):
-                    continue
+        else:
+            # Handle individual OrderItem statuses (these act as overrides)
+            # Only process if overall status was not changed in this request
+            for key, value in request.POST.items():
+                if key.startswith("status_"):
+                    try:
+                        item_id = key.split("_")[1]
+                        item = OrderItem.objects.get(id=item_id, order=order)
+                        item.status = value
+                        item.save()
+                    except (IndexError, OrderItem.DoesNotExist, ValueError):
+                        continue
         
         from django.contrib import messages
         messages.success(request, f"Order #{order.id} statuses updated successfully.")
