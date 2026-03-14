@@ -149,9 +149,9 @@ def edit_product(request, product_id):
             if not name:
                 messages.error(request, "Product name is required")
                 return redirect('edit_product', product_id=product.id)
-            if Product.objects.filter(name__iexact=name).exists():
+            if Product.objects.filter(name__iexact=name).exclude(id=product.id).exists():
                 messages.error(request, "product already exists!")
-                return redirect('create_product')
+                return redirect('edit_product', product_id=product.id)
             product.name = name
 
             # Validate and update description
