@@ -100,10 +100,12 @@
                                                         <p>
                                                             <strong>Update Order Status:</strong>
                                                             <select name="order_status" class="form-control mt-2" style="max-width: 200px; display: inline-block;">
+                                                                <option value="">-- No Change --</option>
                                                                 {% for key, label in order.ORDER_STATUS_CHOICES %}
                                                                 <option value="{{ key }}" {% if order.status == key %}selected{% endif %}>{{ label }}</option>
                                                                 {% endfor %}
                                                             </select>
+                                                            <br><small class="text-muted">Updating this will sync all items below.</small>
                                                         </p>
                                                         <p><strong>Payment Status:</strong> {{ order.payment_status }}</p>
                                                         <p><strong>Total Price:</strong> ₹{{ order.total_price }}</p>
@@ -148,48 +150,11 @@
                                                             <td>{{ item.product.name }}</td>
                                                             <td>{{ item.quantity }}</td>
                                                             <td>₹{{ item.price }}</td>
-                                                            <td>{{ item.status }}</td>
                                                             <td>
-                                                                <select class="form-control"
-                                                                    name="status_{{ item.id }}">
-                                                                    {% if item.status == "pending" or item.status == "Pending" %}
-                                                                    <option value="pending" selected>Order Pending</option>
-                                                                    <option value="confirmed">Confirmed</option>
-                                                                    <option value="Shipped">Shipped</option>
-                                                                    <option value="Out For Delivery">Out For Delivery</option>
-                                                                    <option value="Delivered">Delivered</option>
-                                                                    <option value="Cancelled">Cancelled</option>
-                                                                    {% elif item.status == "confirmed" or item.status == "Confirmed" or item.status == "Order confirmed" %}
-                                                                    <option value="confirmed" selected>Confirmed</option>
-                                                                    <option value="Shipped">Shipped</option>
-                                                                    <option value="Out For Delivery">Out For Delivery</option>
-                                                                    <option value="Delivered">Delivered</option>
-                                                                    <option value="Cancelled">Cancelled</option>
-                                                                    {% elif item.status == "Shipped" %}
-                                                                    <option value="Shipped" selected>Shipped</option>
-                                                                    <option value="Out For Delivery">Out For Delivery</option>
-                                                                    <option value="Delivered">Delivered</option>
-                                                                    <option value="Cancelled">Cancelled</option>
-                                                                    {% elif item.status == "Out For Delivery" %}
-                                                                    <option value="Out For Delivery" selected>Out For
-                                                                        Delivery</option>
-                                                                    <option value="Delivered">Delivered</option>
-                                                                    <option value="Cancelled">Cancelled</option>
-                                                                    {% elif item.status == "Delivered" %}
-                                                                    <option value="Delivered" selected>Delivered
-                                                                    </option>
-                                                                    {% elif item.status == "Cancelled" %}
-                                                                    <option value="Cancelled" selected>Cancelled
-                                                                    </option>
-                                                                    {% elif item.status == "Requested Return" %}
-                                                                    <option value="Approve Returned" selected>Approve
-                                                                        Returned</option>
-                                                                    <option value="Reject Returned" selected>Reject
-                                                                        Returned</option>
-                                                                    {% elif item.status == "Reject Returned" %}
-                                                                    <option value="Reject Returned" selected>Reject
-                                                                        Returned(Delivered)</option>
-                                                                    {% endif %}
+                                                                <select class="form-control" name="status_{{ item.id }}">
+                                                                    {% for key, label in order.ORDER_STATUS_CHOICES %}
+                                                                    <option value="{{ key }}" {% if item.status == key %}selected{% endif %}>{{ label }}</option>
+                                                                    {% endfor %}
                                                                 </select>
                                                             </td>
                                                             <td>₹{{ item.subtotal }}</td>

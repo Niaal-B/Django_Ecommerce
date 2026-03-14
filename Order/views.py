@@ -197,8 +197,10 @@ def admin_order_details(request, order_id):
         if order_status:
             order.status = order_status
             order.save()
+            # Sync all items to the new order status
+            order.items.all().update(status=order_status)
             
-        # Handle individual OrderItem statuses
+        # Handle individual OrderItem statuses (these act as overrides)
         for key, value in request.POST.items():
             if key.startswith("status_"):
                 try:
@@ -208,6 +210,10 @@ def admin_order_details(request, order_id):
                     item.save()
                 except (IndexError, OrderItem.DoesNotExist, ValueError):
                     continue
+        
+        from django.contrib import messages
+        messages.success(request, f"Order #{order.id} statuses updated successfully.")
+        return redirect('admin_order_details', order_id=order.id)
         return redirect('order-view', order_id=order_id)
 
     order_items = order.items.all()

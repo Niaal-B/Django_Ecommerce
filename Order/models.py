@@ -40,7 +40,7 @@ class OrderItem(models.Model):
     quantity = models.PositiveIntegerField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
     size_variant = models.ForeignKey(SizeVariant, on_delete=models.CASCADE, null=True)
-    status = models.CharField(max_length=50, default='Pending')
+    status = models.CharField(max_length=50, choices=Order.ORDER_STATUS_CHOICES, default='pending')
     discount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
 
     def __str__(self):
