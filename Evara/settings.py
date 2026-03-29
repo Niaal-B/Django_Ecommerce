@@ -49,11 +49,12 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',  # Add WhiteNoise for static files
+    'whitenoise.middleware.WhiteNoiseMiddleware',  
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'UserAuth.middleware.BlockCheckMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'social_django.middleware.SocialAuthExceptionMiddleware',
@@ -147,15 +148,9 @@ if CLOUDINARY_CLOUD_NAME and CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET:
     except Exception as e:
         print(f"✗ Warning: Cloudinary configuration failed: {e}")
         import traceback
-        print(traceback.format_exc())
         # Fallback to default storage if Cloudinary fails
         DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
 else:
-    print("✗ Warning: Cloudinary credentials not found. Using default file storage.")
-    print(f"  CLOUDINARY_CLOUD_NAME: {'SET' if CLOUDINARY_CLOUD_NAME else 'NOT SET'}")
-    print(f"  CLOUDINARY_API_KEY: {'SET' if CLOUDINARY_API_KEY else 'NOT SET'}")
-    print(f"  CLOUDINARY_API_SECRET: {'SET' if CLOUDINARY_API_SECRET else 'NOT SET'}")
-    print("  Please set these in your .env file or environment variables.")
     # Fallback to default storage if credentials are missing
     DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
 
@@ -164,21 +159,6 @@ MEDIA_URL = '/media/'
 # MEDIA_ROOT is not needed when using Cloudinary, but kept for backward compatibility
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
-# Final verification of storage configuration (for debugging)
-print("\n" + "="*60)
-print("STORAGE CONFIGURATION SUMMARY:")
-print("="*60)
-print(f"DEFAULT_FILE_STORAGE: {DEFAULT_FILE_STORAGE}")
-if 'cloudinary' in DEFAULT_FILE_STORAGE.lower():
-    print("✓ Cloudinary storage is ACTIVE")
-    print(f"  Cloud Name: {CLOUDINARY_CLOUD_NAME}")
-    print("  New image uploads will be stored in Cloudinary")
-    print("  Image URLs will be: https://res.cloudinary.com/...")
-else:
-    print("✗ Using LOCAL file storage (Cloudinary not configured)")
-    print("  Image URLs will be: /media/...")
-    print("  To enable Cloudinary, set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET")
-print("="*60 + "\n")
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [

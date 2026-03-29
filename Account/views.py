@@ -9,7 +9,6 @@ import re
 from django.contrib.auth.hashers import check_password
 from Order.models import Order,OrderItem
 from Products.models import SizeVariant
-# Create your views here.
 @login_required
 def account(request):
     

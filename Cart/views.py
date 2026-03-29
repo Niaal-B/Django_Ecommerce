@@ -5,7 +5,6 @@ from .models import Cart,CartItem
 from Products.models import Product
 
 
-# Create your views here.
 def cart(request):
     if request.user.is_authenticated:
         cart, created = Cart.objects.get_or_create(user=request.user)

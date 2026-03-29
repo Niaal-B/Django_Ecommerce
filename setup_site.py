@@ -26,7 +26,6 @@ if not created:
     site.domain = domain
     site.name = name
     site.save()
-    print(f"Updated Site: {site.domain}")
 else:
-    print(f"Created Site: {site.domain}")
+    pass
 

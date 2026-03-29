@@ -29,11 +29,9 @@ def send_otp_email(email, otp):
         api_key = getattr(settings, "SENDGRID_API_KEY", "")
 
         if not from_email:
-            print("Warning: DEFAULT_FROM_EMAIL not configured. OTP email cannot be sent.")
             return False
 
         if not api_key:
-            print("Warning: SENDGRID_API_KEY not configured. OTP email cannot be sent.")
             return False
 
         try:
@@ -47,23 +45,12 @@ def send_otp_email(email, otp):
             )
             response = sg.send(mail)
             if 200 <= response.status_code < 300:
-                print(f"OTP email sent successfully to {email}")
                 return True
             else:
-                print(f"Failed to send email to {email}: status {response.status_code}")
-                print(f"Response body: {response.body}")
-                print(f"Response headers: {response.headers}")
                 return False
         except Exception as email_error:
-            print(f"Email sending error: {type(email_error).__name__}: {str(email_error)}")
-            # Log more details if it's a SendGrid exception
-            if hasattr(email_error, 'body'):
-                print(f"SendGrid error body: {email_error.body}")
-            if hasattr(email_error, 'status_code'):
-                print(f"SendGrid status code: {email_error.status_code}")
             return False
     except Exception as e:
-        print(f"Error in send_otp_email: {type(e).__name__}: {str(e)}")
         return False
 
 def validate_password(password):
@@ -296,7 +283,6 @@ def resend_otp(request, email):
                 })
 
         except Exception as e:
-            print(f"Error in resend_otp: {e}")
             return JsonResponse({
                 'success': False,
                 'message': 'An error occurred. Please try again.'

@@ -105,11 +105,6 @@ def create_product(request):
             )
             product.save()
             
-            # Log image URLs and storage backend for debugging (check if Cloudinary is working)
-
-            
-
-
             messages.success(request, "Product created successfully.")
             return redirect('product_management')
 
@@ -195,19 +190,6 @@ def edit_product(request, product_id):
                 except InvalidOperation:
                     messages.error(request, "Offer must be a valid decimal number.")
                     return redirect('edit_product', product_id=product.id)
-
-            # Handle image uploads if provided
-            # image1 = request.FILES.get('image1', product.image1)
-            # image2 = request.FILES.get('image2', product.image2)
-            # image3 = request.FILES.get('image3', product.image3)
-
-            # # Image format validation
-            # for idx, image in enumerate([image1, image2, image3], start=1):
-            #     if image and not image.name.lower().endswith(('.png', '.jpg', '.jpeg','.webp')):
-            #         messages.error(request, "Only PNG, JPG, and JPEG image files are allowed.")
-            #         return redirect('edit_product', product_id=product.id)
-            #     if image:
-            #         setattr(product, f'image{idx}', image)
 
             # Save the product instance with updated fields
             product.save()

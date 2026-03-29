@@ -4,7 +4,6 @@ from Categories.models import Category
 from django.core.paginator import Paginator
 from django.conf import settings
 
-# Create your views here.
 def shop(request):
     
     category_id = request.GET.get('category_id')

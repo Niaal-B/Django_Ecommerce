@@ -4,7 +4,6 @@ from Products.models import Product
 from django.utils import timezone
 from datetime import timedelta
 
-# Create your views here.
 def index(request):
     categories = Category.objects.filter(is_listed=True)
     last_week = timezone.now() - timedelta(days=7)

@@ -5,7 +5,6 @@ from django.utils import timezone
 from Adminauth.views import is_admin 
 from django.contrib.auth.decorators import user_passes_test
 
-# Create your views here.
 @user_passes_test(is_admin)
 def category_management(request):
     if request.method == 'POST':
