@@ -8,6 +8,9 @@ from Adminauth.views import is_admin
 from django.contrib.auth.decorators import user_passes_test
 from django.db.models import F
 import re
+import logging
+
+logger = logging.getLogger(__name__)
 
 @user_passes_test(is_admin)
 def product_list(request):
@@ -109,9 +112,7 @@ def create_product(request):
             return redirect('product_management')
 
         except Exception as e:
-            import traceback
-            error_details = traceback.format_exc()
-
+            logger.error(f"Error creating product: {str(e)}", exc_info=True)
             messages.error(request, f"Error creating product: {str(e)}")
             return redirect('create_product')
 
@@ -198,6 +199,7 @@ def edit_product(request, product_id):
             return redirect('product_management')
 
         except Exception as e:
+            logger.error(f"Error updating product {product_id}: {str(e)}", exc_info=True)
             messages.error(request, f"Error updating product: {str(e)}")
             return redirect('edit_product', product_id=product.id)
 

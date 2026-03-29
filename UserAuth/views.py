@@ -13,6 +13,9 @@ from django.template.loader import render_to_string
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 import re
+import logging
+
+logger = logging.getLogger(__name__)
 
 def generate_otp():
     return random.randint(100000, 999999)
@@ -32,6 +35,7 @@ def send_otp_email(email, otp):
             return False
 
         if not api_key:
+            logger.error("SENDGRID_API_KEY not configured. OTP email cannot be sent.")
             return False
 
         try:
@@ -45,10 +49,13 @@ def send_otp_email(email, otp):
             )
             response = sg.send(mail)
             if 200 <= response.status_code < 300:
+                logger.info(f"OTP email sent successfully to {email}")
                 return True
             else:
+                logger.error(f"Failed to send email to {email}: status {response.status_code}")
                 return False
         except Exception as email_error:
+            logger.error(f"Email sending error: {type(email_error).__name__}: {str(email_error)}", exc_info=True)
             return False
     except Exception as e:
         return False
@@ -283,6 +290,7 @@ def resend_otp(request, email):
                 })
 
         except Exception as e:
+            logger.error(f"Error in resend_otp: {e}", exc_info=True)
             return JsonResponse({
                 'success': False,
                 'message': 'An error occurred. Please try again.'
