@@ -11,7 +11,6 @@ class BlockCheckMiddleware:
 
     def __call__(self, request):
         # We only check for authenticated users.
-        # If the user is authenticated but is_active is False, they were blocked.
         if request.user.is_authenticated and not request.user.is_active:
             logger.warning(f"Forced logout for blocked user: {request.user.username}")
             logout(request)

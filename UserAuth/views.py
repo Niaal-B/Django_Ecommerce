@@ -39,6 +39,12 @@ def send_otp_email(email, otp):
             return False
 
         try:
+            # Safe diagnostic logging (metadata only)
+            key_len = len(api_key)
+            first_4 = api_key[:4] if key_len >= 4 else "N/A"
+            last_4 = api_key[-4:] if key_len >= 4 else "N/A"
+            logger.info(f"SendGrid Debug: Key length: {key_len}, Starts with: '{first_4}', Ends with: '{last_4}'")
+
             sg = SendGridAPIClient(api_key)
             mail = Mail(
                 from_email=from_email,
