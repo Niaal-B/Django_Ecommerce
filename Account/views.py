@@ -9,15 +9,20 @@ import re
 from django.contrib.auth.hashers import check_password
 from Order.models import Order,OrderItem
 from Products.models import SizeVariant
+from Wallet.models import Wallet, WalletTransaction
 @login_required
 def account(request):
     
     addresses = Address.objects.filter(user = request.user,is_deleted=False)
-    orders = Order.objects.filter(user=request.user)
+    orders = Order.objects.filter(user=request.user).order_by('-created_at')
+    wallet, created = Wallet.objects.get_or_create(user=request.user)
+    recent_transactions = WalletTransaction.objects.filter(wallet=wallet).order_by('-timestamp')[:5]
     
     context = {
         'addresses' : addresses,
         'orders' : orders,
+        'wallet': wallet,
+        'recent_transactions': recent_transactions,
     }
     return render(request,'accounts.html',context)
 
@@ -261,7 +266,21 @@ def cancel_order(request, order_id):
     order.save()
     order.sync_items_status()
 
-    messages.success(request, "Order has been successfully canceled.")
+    # Refund to Wallet if payment was made
+    if order.payment_status == 'paid' or order.payment_method == 'razorpay':
+        user_wallet, created = Wallet.objects.get_or_create(user=request.user)
+        user_wallet.balance += order.total_price
+        user_wallet.save()
+        
+        WalletTransaction.objects.create(
+            wallet=user_wallet,
+            amount=order.total_price,
+            transaction_type='CREDIT',
+            description=f"Refund for canceled Order #{order.id}"
+        )
+        messages.success(request, f"Order canceled. amount ₹{order.total_price} has been credited to your wallet.")
+    else:
+        messages.success(request, "Order has been successfully canceled.")
     return redirect('account')
 
 @login_required
@@ -285,7 +304,21 @@ def return_order(request, order_id):
         # Sync all items to 'returned' status
         order.sync_items_status()
 
-        messages.success(request, f"Return request for Order #{order.id} has been submitted.")
+        # For now, credit wallet immediately on return (can be moved to admin approval later)
+        if order.payment_status == 'paid' or order.payment_method == 'razorpay':
+            user_wallet, created = Wallet.objects.get_or_create(user=request.user)
+            user_wallet.balance += order.total_price
+            user_wallet.save()
+            
+            WalletTransaction.objects.create(
+                wallet=user_wallet,
+                amount=order.total_price,
+                transaction_type='CREDIT',
+                description=f"Refund for returned Order #{order.id}"
+            )
+            messages.success(request, f"Return request submitted. amount ₹{order.total_price} has been credited to your wallet.")
+        else:
+            messages.success(request, f"Return request for Order #{order.id} has been submitted.")
         return redirect('account')
 
     return redirect('account')

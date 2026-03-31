@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
-{%load static%}
-{% block title %}cart{% endblock %}
+{% load static %}
+{% block title %}Checkout{% endblock %}
 {% block content %}
 <style>
   .modal {
@@ -36,57 +36,6 @@
     color: var(--text-color);
   }
 
-  .modal__title {
-    font-size: var(--h3-font-size);
-    margin-bottom: 2rem;
-  }
-
-  .modal__form {
-    display: grid;
-    gap: 1.5rem;
-  }
-
-  .form__group {
-    display: grid;
-    gap: 0.5rem;
-  }
-
-  .form__row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-  }
-
-  .form__label {
-    font-size: var(--small-font-size);
-    font-weight: var(--weight-500);
-  }
-
-  .form__input {
-    padding: 0.75rem 1rem;
-    border: 1px solid var(--border-color);
-    border-radius: 0.5rem;
-    font-size: var(--small-font-size);
-    transition: border-color 0.3s;
-  }
-
-  .form__input:focus {
-    border-color: var(--first-color);
-    outline: none;
-  }
-
-  @media screen and (max-width: 768px) {
-    .form__row {
-      grid-template-columns: 1fr;
-    }
-
-    .modal__content {
-      padding: 1.5rem;
-    }
-  }
-
-
-
   .billing__details {
     padding: 2rem;
     background-color: white;
@@ -94,7 +43,6 @@
     margin-bottom: 2rem;
     border: 1px solid var(--border-color-alt);
   }
-
 
   .saved__addresses {
     display: grid;
@@ -138,25 +86,11 @@
     color: var(--text-color);
     line-height: 1.5;
   }
-
-  .address__phone {
-    margin-top: 0.5rem;
-  }
-
-  .no__address {
-    text-align: center;
-    color: var(--text-color);
-    margin-bottom: 1rem;
-  }
-
-  .add__address {
-    width: 100%;
-    margin-top: 1rem;
-  }
 </style>
+
 <!--=============== MAIN ===============-->
 <main class="main">
-  <!-- Edit Address Modal -->
+  <!-- Modals (Add/Edit Address) -->
   <div id="editModal" class="modal">
     <div class="modal__content">
       <span class="modal__close" id="closeEditModalBtn">&times;</span>
@@ -166,23 +100,15 @@
         <input type="hidden" id="editId" name="id" />
         <input type="text" id="editName" name="name" placeholder="Name" class="form__input" required />
         <input type="text" id="editAddress" name="address" placeholder="Address" class="form__input" required />
-        <input type="text" id="editPostcode" name="postcode" placeholder="Postcode" class="form__input" required
-          oninput="fetchLocationDetails()" />
+        <input type="text" id="editPostcode" name="postcode" placeholder="Postcode" class="form__input" required oninput="fetchLocationDetails()" />
         <input type="text" id="editCity" name="city" placeholder="City" class="form__input" required />
         <input type="text" id="editState" name="state" placeholder="State" class="form__input" required />
         <input type="text" id="editCountry" name="country" placeholder="Country" class="form__input" required />
         <input type="text" id="editPhone" name="phone" placeholder="Phone" class="form__input" required />
         <button type="submit" class="btn btn--md">Update Address</button>
       </form>
-
     </div>
-    {% if messages %}
-    {% for message in messages %}
-    <p class="alert {{ message.tags }}">{{ message }}</p>
-    {% endfor %}
-    {% endif %}
   </div>
-
 
   <div id="modal" class="modal">
     <div class="modal__content">
@@ -192,8 +118,7 @@
         {% csrf_token %}
         <input type="text" name="name" placeholder="Name" class="form__input" required />
         <input type="text" name="address" placeholder="Address" class="form__input" required />
-        <input type="text" id="postcode" name="postcode" placeholder="Postcode" class="form__input" required
-          oninput="fetchLocationDetails()" />
+        <input type="text" id="postcode" name="postcode" placeholder="Postcode" class="form__input" required oninput="fetchLocationDetails()" />
         <input type="text" id="city" name="city" placeholder="City" class="form__input" required />
         <input type="text" id="state" name="state" placeholder="State" class="form__input" required />
         <input type="text" id="country" name="country" placeholder="Country" class="form__input" required />
@@ -201,31 +126,23 @@
         <input type="email" name="email" placeholder="Email" class="form__input" required />
         <button type="submit" class="btn btn--md">Add Address</button>
       </form>
-      {% if messages %}
-      {% for message in messages %}
-      <p class="alert {{ message.tags }}">{{ message }}</p>
-      {% endfor %}
-      {% endif %}
     </div>
   </div>
+
   <!--=============== BREADCRUMB ===============-->
   <section class="breadcrumb">
     <ul class="breadcrumb__list flex container">
-      <li><a href="index.html" class="breadcrumb__link">Home</a></li>
-      <li><span class="breadcrumb__link">></span></li>
-      <li><span class="breadcrumb__link">Shop</span></li>
+      <li><a href="{% url 'home' %}" class="breadcrumb__link">Home</a></li>
       <li><span class="breadcrumb__link">></span></li>
       <li><span class="breadcrumb__link">Checkout</span></li>
     </ul>
   </section>
 
   <!--=============== CHECKOUT ===============-->
-
   <section class="checkout section--lg">
     <div class="checkout__container container grid">
       <div class="checkout__group">
-
-        <!--=============== select address goes heres ===============-->
+        <h3 class="section__title">Billing Details</h3>
         <div class="billing__details">
           {% if addresses %}
           <div class="saved__addresses">
@@ -236,41 +153,27 @@
                 <div class="address__content">
                   <h4 class="address__name">{{ address.name }}</h4>
                   <p class="address__details">
-                    {{ address.address }}
-                    <br>
-                    {{ address.city }}, {{ address.state }} {{ address.pincode }}
-                    <br>
-                    {{ address.country }}
+                    {{ address.address }}<br>
+                    {{ address.city }}, {{ address.state }} {{ address.postcode }}<br>
+                    India
                   </p>
                   <p class="address__phone">Phone: {{ address.phone }}</p>
                 </div>
-                <input type="hidden" name="selected_address" value="{{ selected_address_id }}">
-
               </label>
-              <button class="edit"
-                onclick="openEditModal('{{ address.id }}', '{{ address.name }}', '{{ address.address }}', '{{ address.postcode }}', '{{ address.city }}', '{{ address.state }}','{{ address.phone }}')">Edit</button>
+              <button class="edit" style="color: var(--first-color); font-size: 0.8rem; margin-top: 10px;"
+                onclick="openEditModal('{{ address.id }}', '{{ address.name }}', '{{ address.address }}', '{{ address.postcode }}', '{{ address.city }}', '{{ address.state }}','{{ address.phone }}')">Edit Address</button>
             </div>
             {% endfor %}
           </div>
           {% else %}
           <p class="no__address">No saved addresses found. Please add a new address.</p>
           {% endif %}
-          {% if messages %}
-          {% for message in messages %}
-          <p class="alert {{ message.tags }}">{{ message }}</p>
-          {% endfor %}
-          {% endif %}
-          <button class="btn" id="openModalBtn">Add New Address</button>
+          <button class="btn btn--md" id="openModalBtn">Add New Address</button>
         </div>
-
-
-
-
-        <!-- Address Modal -->
-
       </div>
+
       <div class="checkout__group">
-        <h3 class="section__title">Cart Totals</h3>
+        <h3 class="section__title">Your Order</h3>
         <table class="order__table">
           <thead>
             <tr>
@@ -278,23 +181,21 @@
               <th>Total</th>
             </tr>
           </thead>
-
           <tbody>
             {% for item in cart_items %}
             <tr>
               <td>
                 {% if item.product.image1 %}
-                <img src="{{ item.product.image1.url }}" alt="" class="order__img" />
+                <img src="{{ item.product.image1.url }}" alt="" class="order__img" style="width: 60px; height: 60px; object-fit: cover; border-radius: 5px;" />
                 {% endif %}
               </td>
               <td>
-                <h3 class="table__title">{{ item.product.name }}</h3>
+                <h3 class="table__title" style="font-size: 0.9rem;">{{ item.product.name }}</h3>
                 <p class="table__quantity">x {{ item.quantity }}</p>
               </td>
               <td><span class="table__price">₹{{ item.subtotal }}</span></td>
             </tr>
             {% endfor %}
-            </tr>
             <tr>
               <td><span class="order__subtitle">Shipping</span></td>
               <td colspan="2">
@@ -302,284 +203,70 @@
               </td>
             </tr>
             <tr>
-              <td><span class="order__subtitle">Total</span></td>
+              <td><span class="order__subtitle" style="font-weight: 700; font-size: 1.1rem;">Total</span></td>
               <td colspan="2">
-                <span class="order__grand-total">{{total}}</span>
+                <span class="table__grand-total" style="font-weight: 700; font-size: 1.1rem; color: var(--first-color);">₹{{ total }}</span>
               </td>
             </tr>
           </tbody>
         </table>
-        <div class="payment__methods">
-          <h3 class="checkout__title payment__title">Payment</h3>
-          <div class="payment__option flex">
-            <input type="radio" name="payment_method" value="COD" id="cod" class="payment__input" />
-            <label for="l2" class="payment__label">Cash on Delivery</label>
-          </div>
-          <div class="payment__option flex">
-            <input type="radio" name="payment_method" id="l3" value="razorpay" class="payment__input" />
-            <label for="l3" class="payment__label">Razorpay</label>
-          </div>
-        </div>
-        <form method="POST" action="{% url 'place_order' %}">
-          {% csrf_token %}
-          <input type="hidden" name="selected_address" value="{{ selected_address_id }}">
-          <input type="hidden" name="payment_method" value="{{ payment_method }}">
-          <!-- Place Order Button -->
-          <button id="placeOrderBtn" class="btn btn--md" type="button">Place Order</button>
+        
+        <div class="payment__methods" style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
+          <h4 class="section__title" style="font-size: 1.1rem; margin-bottom: 15px;">Payment Method</h4>
+          <div class="payment__options grid" style="gap: 10px; margin-bottom: 25px;">
+            <div class="payment__option" style="display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid #eee; border-radius: 8px;">
+              <input type="radio" name="payment_method" value="COD" id="cod" checked>
+              <label for="cod" style="cursor: pointer;">Cash on Delivery</label>
+            </div>
+            
+            <div class="payment__option" style="display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid #eee; border-radius: 8px;">
+              <input type="radio" name="payment_method" value="razorpay" id="razorpay">
+              <label for="razorpay" style="cursor: pointer;">Razorpay (Online)</label>
+            </div>
 
-        </form>
-      </div>
-
-    </div>
-
-  </section>
-
-
-</main>
-<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-<script>
-  document.addEventListener("DOMContentLoaded", function () {
-    const modal = document.getElementById("modal");
-    const openModalBtn = document.getElementById("openModalBtn");
-    const closeModalBtn = document.getElementById("closeModalBtn");
-
-    openModalBtn.addEventListener("click", () => {
-      modal.style.display = "block";
-    });
-
-    closeModalBtn.addEventListener("click", () => {
-      modal.style.display = "none";
-    });
-
-    window.addEventListener("click", (event) => {
-      if (event.target === modal) {
-        modal.style.display = "none";
-      }
-    });
-  });
-</script>
-
-<script>
-  function fetchLocationDetails() {
-    const postcode = document.getElementById('postcode').value;
-    if (postcode.length >= 6) {
-      fetch(`https://api.postalpincode.in/pincode/${postcode}`)
-        .then(response => response.json())
-        .then(data => {
-          if (data[0].Status === "Success") {
-            const postOffice = data[0].PostOffice[0];
-            document.getElementById('city').value = postOffice.District;
-            document.getElementById('state').value = postOffice.State;
-            document.getElementById('country').value = "India";
-          } else {
-            alert("Invalid PIN code or data not found.");
-          }
-        })
-        .catch(error => console.error('Error fetching location data:', error));
-    }
-  }
-</script>
-
-<script>
-  function openEditModal(id, name, address, postcode, city, state, phone) {
-    const modal = document.getElementById('editModal');
-    document.getElementById('editId').value = id;
-
-    document.getElementById('editName').value = name;
-    document.getElementById('editAddress').value = address;
-    document.getElementById('editPostcode').value = postcode;
-    document.getElementById('editCity').value = city;
-    document.getElementById('editState').value = state;
-    document.getElementById('editCountry').value = 'India';
-    document.getElementById('editPhone').value = phone;
-    modal.style.display = 'block';
-  }
-
-  document.getElementById('closeEditModalBtn').addEventListener('click', () => {
-    document.getElementById('editModal').style.display = 'none';
-  });
-
-  window.addEventListener('click', (event) => {
-    const modal = document.getElementById('editModal');
-    if (event.target === modal) {
-      modal.style.display = 'none';
-    }
-  });
-</script>
-
-<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-<script>
-  // Function to load Razorpay script dynamically with error handling
-  function loadRazorpayScript() {
-    return new Promise(function (resolve, reject) {
-      // Check if already loaded
-      if (typeof Razorpay !== 'undefined') {
-        console.log("Razorpay script already loaded");
-        resolve();
-        return;
-      }
-
-      // Check if script tag already exists
-      var existingScript = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
-      if (existingScript) {
-        // Wait for it to load
-        existingScript.onload = function () {
-          if (typeof Razorpay !== 'undefined') {
-            resolve();
-          } else {
-            reject(new Error("Razorpay script failed to load"));
-          }
-        };
-        existingScript.onerror = function () {
-          reject(new Error("Failed to load Razorpay script"));
-        };
-        return;
-      }
-
-      var script = document.createElement('script');
-      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-      script.async = true;
-      script.onload = function () {
-        console.log("Razorpay script loaded successfully");
-        if (typeof Razorpay !== 'undefined') {
-          resolve();
-        } else {
-          reject(new Error("Razorpay object not available after script load"));
-        }
-      };
-      script.onerror = function () {
-        console.error("Failed to load Razorpay script");
-        reject(new Error("Failed to load payment gateway"));
-      };
-      document.head.appendChild(script);
-    });
-  }
-
-  // Load Razorpay script when page loads
-  var razorpayLoaded = false;
-  loadRazorpayScript()
-    .then(function () {
-      razorpayLoaded = true;
-      console.log("Razorpay ready");
-    })
-    .catch(function (error) {
-      console.error("Razorpay script loading error:", error);
-      // Don't show alert on page load, only when user tries to pay
-    });
-        <table class="order__table">
-          <thead>
-            <tr>
-              <th colspan="2">Products</th>
-              <th>Total</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {% for item in cart_items %}
-            <tr>
-              <td>
-                {% if item.product.image1 %}
-                <img src="{{ item.product.image1.url }}" alt="" class="order__img" />
+            <div class="payment__option" style="display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid #eee; border-radius: 8px; {% if wallet.balance < total %}opacity: 0.6;{% endif %}">
+              <input type="radio" name="payment_method" value="wallet" id="wallet" {% if wallet.balance < total %}disabled{% endif %}>
+              <label for="wallet" style="cursor: pointer; display: flex; flex-direction: column;">
+                <span style="font-weight: 600;">Wallet Payment</span>
+                <span style="font-size: 0.75rem; color: #666;">Balance: ₹{{ wallet.balance }}</span>
+                {% if wallet.balance < total %}
+                <span style="font-size: 0.7rem; color: #ff4d4d;">Insufficient balance</span>
                 {% endif %}
-              </td>
-              <td>
-                <h3 class="table__title">{{ item.product.name }}</h3>
-                <p class="table__quantity">x {{ item.quantity }}</p>
-              </td>
-              <td><span class="table__price">₹{{ item.subtotal }}</span></td>
-            </tr>
-            {% endfor %}
-            </tr>
-            <tr>
-              <td><span class="order__subtitle">Shipping</span></td>
-              <td colspan="2">
-                <span class="table__price">{% if delivery_charge == 0 %}Free Shipping{% else %}₹{{ delivery_charge|floatformat:0 }}{% endif %} </span>
-              </td>
-            </tr>
-            <tr>
-              <td><span class="order__subtitle">Total</span></td>
-              <td colspan="2">
-                <span class="order__grand-total">{{total}}</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <div class="payment__methods">
-          <h3 class="checkout__title payment__title">Payment</h3>
-          <div class="payment__option flex">
-            <input type="radio" name="payment_method" value="COD" id="cod" class="payment__input" />
-            <label for="l2" class="payment__label">Cash on Delivery</label>
+              </label>
+            </div>
           </div>
-          <div class="payment__option flex">
-            <input type="radio" name="payment_method" id="l3" value="razorpay" class="payment__input" />
-            <label for="l3" class="payment__label">Razorpay</label>
-          </div>
+
+          <button id="placeOrderBtn" class="btn btn--md" type="button" style="width: 100%;">Place Order</button>
         </div>
-        <form method="POST" action="{% url 'place_order' %}">
-          {% csrf_token %}
-          <input type="hidden" name="selected_address" value="{{ selected_address_id }}">
-          <input type="hidden" name="payment_method" value="{{ payment_method }}">
-          <!-- Place Order Button -->
-          <button id="placeOrderBtn" class="btn btn--md" type="button">Place Order</button>
-
-        </form>
       </div>
-
     </div>
-
   </section>
-
-
 </main>
+
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
 <script>
+  // Modal toggle logic
   document.addEventListener("DOMContentLoaded", function () {
     const modal = document.getElementById("modal");
     const openModalBtn = document.getElementById("openModalBtn");
     const closeModalBtn = document.getElementById("closeModalBtn");
+    const editModal = document.getElementById("editModal");
+    const closeEditModalBtn = document.getElementById("closeEditModalBtn");
 
-    openModalBtn.addEventListener("click", () => {
-      modal.style.display = "block";
-    });
-
-    closeModalBtn.addEventListener("click", () => {
-      modal.style.display = "none";
-    });
+    if(openModalBtn) openModalBtn.addEventListener("click", () => modal.style.display = "block");
+    if(closeModalBtn) closeModalBtn.addEventListener("click", () => modal.style.display = "none");
+    if(closeEditModalBtn) closeEditModalBtn.addEventListener("click", () => editModal.style.display = "none");
 
     window.addEventListener("click", (event) => {
-      if (event.target === modal) {
-        modal.style.display = "none";
-      }
+      if (event.target === modal) modal.style.display = "none";
+      if (event.target === editModal) editModal.style.display = "none";
     });
   });
-</script>
 
-<script>
-  function fetchLocationDetails() {
-    const postcode = document.getElementById('postcode').value;
-    if (postcode.length >= 6) {
-      fetch(`https://api.postalpincode.in/pincode/${postcode}`)
-        .then(response => response.json())
-        .then(data => {
-          if (data[0].Status === "Success") {
-            const postOffice = data[0].PostOffice[0];
-            document.getElementById('city').value = postOffice.District;
-            document.getElementById('state').value = postOffice.State;
-            document.getElementById('country').value = "India";
-          } else {
-            alert("Invalid PIN code or data not found.");
-          }
-        })
-        .catch(error => console.error('Error fetching location data:', error));
-    }
-  }
-</script>
-
-<script>
   function openEditModal(id, name, address, postcode, city, state, phone) {
-    const modal = document.getElementById('editModal');
     document.getElementById('editId').value = id;
-
     document.getElementById('editName').value = name;
     document.getElementById('editAddress').value = address;
     document.getElementById('editPostcode').value = postcode;
@@ -587,49 +274,40 @@
     document.getElementById('editState').value = state;
     document.getElementById('editCountry').value = 'India';
     document.getElementById('editPhone').value = phone;
-    modal.style.display = 'block';
+    document.getElementById('editModal').style.display = 'block';
   }
 
-  document.getElementById('closeEditModalBtn').addEventListener('click', () => {
-    document.getElementById('editModal').style.display = 'none';
-  });
-
-  window.addEventListener('click', (event) => {
-    const modal = document.getElementById('editModal');
-    if (event.target === modal) {
-      modal.style.display = 'none';
+  function fetchLocationDetails() {
+    const postcodeField = event.target;
+    const postcode = postcodeField.value;
+    if (postcode.length >= 6) {
+      fetch(`https://api.postalpincode.in/pincode/${postcode}`)
+        .then(response => response.json())
+        .then(data => {
+          if (data[0].Status === "Success") {
+            const postOffice = data[0].PostOffice[0];
+            const prefix = postcodeField.id === 'editPostcode' ? 'edit' : '';
+            document.getElementById(prefix ? 'editCity' : 'city').value = postOffice.District;
+            document.getElementById(prefix ? 'editState' : 'state').value = postOffice.State;
+            document.getElementById(prefix ? 'editCountry' : 'country').value = "India";
+          }
+        });
     }
-  });
-</script>
-
-<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-<script>
-  // Function to load Razorpay script dynamically with error handling
-  function loadRazorpayScript() {
-    return new Promise(function (resolve, reject) {
-      if (typeof Razorpay !== 'undefined') {
-        resolve();
-        return;
-      }
-      var script = document.createElement('script');
-      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-      script.async = true;
-      script.onload = function () {
-        if (typeof Razorpay !== 'undefined') {
-          resolve();
-        } else {
-          reject(new Error("Razorpay object not available after script load"));
-        }
-      };
-      script.onerror = function () {
-        reject(new Error("Failed to load payment gateway"));
-      };
-      document.head.appendChild(script);
-    });
   }
 
-  // Extract payment logic to separate function
-  function proceedWithPayment(selectedAddressId, paymentMethod) {
+  // Payment Logic
+  document.getElementById("placeOrderBtn").addEventListener("click", function () {
+    const selectedAddress = document.querySelector('input[name="selected_address"]:checked');
+    const selectedPaymentMethod = document.querySelector('input[name="payment_method"]:checked');
+
+    if (!selectedAddress || !selectedPaymentMethod) {
+      alert("Please select an address and payment method.");
+      return;
+    }
+
+    const addressId = selectedAddress.value;
+    const paymentMethod = selectedPaymentMethod.value;
+
     function getCookie(name) {
       let cookieValue = null;
       if (document.cookie && document.cookie !== '') {
@@ -644,123 +322,38 @@
       }
       return cookieValue;
     }
-    const csrftoken = getCookie('csrftoken');
 
     axios.post("{% url 'place_order' %}", {
-      address_id: selectedAddressId,
-      payment_method: paymentMethod,
+      address_id: addressId,
+      payment_method: paymentMethod
     }, {
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': csrftoken,
+      headers: { 'X-CSRFToken': getCookie('csrftoken') }
+    })
+    .then(response => {
+      if (paymentMethod === 'razorpay') {
+        const options = {
+          "key": response.data.razorpay_merchant_key,
+          "amount": response.data.razorpay_amount,
+          "currency": "INR",
+          "name": "Evara Ecommerce",
+          "order_id": response.data.razorpay_order_id,
+          "callback_url": "{% url 'payment_success' %}?address_id=" + addressId,
+          "prefill": {
+            "name": "{{ request.user.username }}",
+            "email": "{{ request.user.email }}"
+          }
+        };
+        const rzp = new Razorpay(options);
+        rzp.open();
+      } else if (response.data.success) {
+        window.location.href = "{% url 'order_success' %}";
+      } else {
+        alert(response.data.error || "Order failed");
       }
     })
-      .then(function (response) {
-        if (paymentMethod === "razorpay") {
-          if (typeof Razorpay === 'undefined') {
-            loadRazorpayScript()
-              .then(function () {
-                openRazorpayModal(response.data, selectedAddressId, csrftoken);
-              })
-              .catch(function (error) {
-                alert("Payment gateway is not available. Please refresh the page.");
-              });
-            return;
-          }
-
-          let contactNumber = '';
-          try {
-            const addressCard = document.querySelector(`input[name="selected_address"][value="${selectedAddressId}"]`).closest('.address__card');
-            const phoneText = addressCard.querySelector('.address__phone').textContent;
-            contactNumber = phoneText.replace('Phone:', '').trim();
-          } catch (e) {
-            console.warn("Could not extract phone number:", e);
-          }
-
-          openRazorpayModal(response.data, selectedAddressId, csrftoken, contactNumber);
-        } else if (response.data.success) {
-          window.location.href = "{% url 'order_success' %}";
-        } else {
-          alert(response.data.error || "Something went wrong");
-        }
-      })
-      .catch(function (error) {
-        console.error("Order placement error:", error);
-        alert(error.response ? error.response.data.error : "Network error occurred.");
-      });
-  }
-
-  // Function to open Razorpay payment modal
-  function openRazorpayModal(responseData, selectedAddressId, csrftoken, prefillContact) {
-    let paymentProcessed = false;
-    const currentPaymentOrderId = responseData.razorpay_order_id;
-
-    var options = {
-      "key": responseData.razorpay_merchant_key,
-      "amount": responseData.razorpay_amount,
-      "currency": responseData.currency || "INR",
-      "name": "Evara Ecommerce",
-      "description": "Order Payment",
-      "order_id": responseData.razorpay_order_id,
-      "callback_url": window.location.origin + "{% url 'payment_success' %}?address_id=" + selectedAddressId,
-      "redirect": true,
-      "prefill": {
-        "name": "{{ request.user.username }}",
-        "email": "{{ request.user.email }}",
-        "contact": prefillContact || ""
-      },
-      "theme": {
-        "color": "#3399cc"
-      },
-      "modal": {
-        "ondismiss": function () {
-          if (!paymentProcessed && currentPaymentOrderId) {
-            alert("If you completed the payment, please check your order history to confirm.");
-          }
-        }
-      }
-    };
-
-    try {
-      var rzp1 = new Razorpay(options);
-      rzp1.on('payment.failed', function (response) {
-        alert("Payment Failed: " + (response.error.description || "Unknown reason"));
-      });
-      rzp1.open();
-    } catch (error) {
-      console.error("Error initializing Razorpay:", error);
-      alert("Error opening payment gateway. Please refresh it.");
-    }
-  }
-
-  // Main event listener
-  document.getElementById("placeOrderBtn").addEventListener("click", function (event) {
-    event.preventDefault();
-    const selectedAddress = document.querySelector('input[name="selected_address"]:checked');
-    const selectedAddressId = selectedAddress ? selectedAddress.value : null;
-    const selectedPaymentMethod = document.querySelector('input[name="payment_method"]:checked');
-    const paymentMethod = selectedPaymentMethod ? selectedPaymentMethod.value : null;
-
-    if (selectedAddressId && paymentMethod) {
-      if (paymentMethod === "razorpay" && typeof Razorpay === 'undefined') {
-        loadRazorpayScript()
-          .then(function () {
-            proceedWithPayment(selectedAddressId, paymentMethod);
-          })
-          .catch(function (error) {
-            alert("Payment gateway is not available.");
-          });
-      } else {
-        proceedWithPayment(selectedAddressId, paymentMethod);
-      }
-    } else {
-      alert("Please select both address and payment method.");
-    }
+    .catch(err => {
+      alert(err.response?.data?.error || "Error placing order");
+    });
   });
 </script>
-
-<script type="text/javascript">
-  window.CSRF_TOKEN = "{{ csrf_token }}"; 
-</script>
-
 {% endblock %}

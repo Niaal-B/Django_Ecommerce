@@ -13,6 +13,7 @@ from Account.models import Address
 from Cart.models import Cart, CartItem
 from .models import Order, OrderItem
 from Products.models import Product, SizeVariant
+from Wallet.models import Wallet, WalletTransaction
 from Adminauth.views import is_admin 
 
 @login_required
@@ -53,7 +54,7 @@ def place_order(request):
         total += delivery_charge
         
     except Cart.DoesNotExist:
-        cart_items = []
+        cart_items = CartItem.objects.none()
         total = Decimal('0.00')
         delivery_charge = Decimal('0.00')
     
@@ -130,6 +131,51 @@ def place_order(request):
                     logger.error(f"Failed to initiate Razorpay order: {str(e)}", exc_info=True)
                     return JsonResponse({"error": f"Failed to create payment order: {str(e)}"}, status=500)
 
+            if payment_method == "wallet":
+                user_wallet, created = Wallet.objects.get_or_create(user=user)
+                if user_wallet.balance < total:
+                    return JsonResponse({"error": f"Insufficient wallet balance. Available: ₹{user_wallet.balance}"}, status=400)
+                
+                # Deduct from wallet
+                user_wallet.balance -= total
+                user_wallet.save()
+                
+                # Create Order
+                order = Order.objects.create(
+                    user=user,
+                    address=address,
+                    payment_method="wallet",
+                    total_price=total,
+                    payment_status="paid",
+                    status="confirmed"
+                )
+                
+                # Create Wallet Transaction
+                WalletTransaction.objects.create(
+                    wallet=user_wallet,
+                    amount=total,
+                    transaction_type='DEBIT',
+                    description=f"Payment for Order #{order.id}"
+                )
+                
+                for item in cart_items:
+                    size_variant = SizeVariant.objects.get(product=item.product, size=item.size)
+                    size_variant.stock -= int(item.quantity)
+                    size_variant.save()
+                    
+                    price = item.product.offer if item.product.offer and item.product.offer > 0 else item.product.price
+                    OrderItem.objects.create(
+                        order=order,
+                        product=item.product,
+                        quantity=item.quantity,
+                        price=price,
+                        size_variant=size_variant,
+                        status="confirmed"
+                    )
+                
+                cart_items.delete()
+                return JsonResponse({"success": "Order placed successfully using wallet!"}, status=200)
+
             # Create Order for COD
             order = Order.objects.create(
                 user=user,
@@ -165,11 +211,14 @@ def place_order(request):
             return JsonResponse({"error": "Invalid request format."}, status=400)
     
     
+    user_wallet, created = Wallet.objects.get_or_create(user=user)
+    
     context = {
         'addresses': addresses,
         'cart_items': cart_items,
         'total': total,
-        'delivery_charge': delivery_charge
+        'delivery_charge': delivery_charge,
+        'wallet': user_wallet
     }
     return render(request, 'checkout.html', context)
 
