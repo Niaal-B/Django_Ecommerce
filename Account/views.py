@@ -16,7 +16,7 @@ def account(request):
     addresses = Address.objects.filter(user = request.user,is_deleted=False)
     orders = Order.objects.filter(user=request.user).order_by('-created_at')
     wallet, created = Wallet.objects.get_or_create(user=request.user)
-    recent_transactions = WalletTransaction.objects.filter(wallet=wallet).order_by('-timestamp')[:5]
+    recent_transactions = WalletTransaction.objects.filter(wallet=wallet).order_by('-created_at')[:5]
     
     context = {
         'addresses' : addresses,
