@@ -12,7 +12,7 @@
 [Features](#-features) • [Installation](#-installation) • [Configuration](#-configuration)
 
 </div>
-
+ 
 ---
 
 ## 📖 Table of Contents
