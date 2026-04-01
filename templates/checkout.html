@@ -244,10 +244,31 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-
 <script>
-  // Modal toggle logic
+  // Function to load Razorpay script dynamically
+  function loadRazorpayScript() {
+    return new Promise(function (resolve, reject) {
+      if (typeof Razorpay !== 'undefined') {
+        resolve();
+        return;
+      }
+      var script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.async = true;
+      script.onload = function () {
+        if (typeof Razorpay !== 'undefined') {
+          resolve();
+        } else {
+          reject(new Error("Razorpay object not available after script load"));
+        }
+      };
+      script.onerror = function () {
+        reject(new Error("Failed to load payment gateway"));
+      };
+      document.head.appendChild(script);
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     const modal = document.getElementById("modal");
     const openModalBtn = document.getElementById("openModalBtn");
@@ -295,78 +316,50 @@
     }
   }
 
-  // Payment Logic
-  document.getElementById("placeOrderBtn").addEventListener("click", function () {
-    const selectedAddress = document.querySelector('input[name="selected_address"]:checked');
-    const selectedPaymentMethod = document.querySelector('input[name="payment_method"]:checked');
-
-    if (!selectedAddress || !selectedPaymentMethod) {
-      alert("Please select an address and payment method.");
-      return;
-    }
-
-    const addressId = selectedAddress.value;
-    const paymentMethod = selectedPaymentMethod.value;
-
-    function getCookie(name) {
-      let cookieValue = null;
-      if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-          const cookie = cookies[i].trim();
-          if (cookie.substring(0, name.length + 1) === (name + '=')) {
-            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-            break;
-          }
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
         }
       }
-      return cookieValue;
     }
+    return cookieValue;
+  }
 
+  function proceedWithPayment(selectedAddressId, paymentMethod) {
     axios.post("{% url 'place_order' %}", {
-      address_id: addressId,
+      address_id: selectedAddressId,
       payment_method: paymentMethod
     }, {
       headers: { 'X-CSRFToken': getCookie('csrftoken') }
     })
     .then(response => {
       if (paymentMethod === 'razorpay') {
-        const options = {
-          "key": response.data.razorpay_merchant_key,
-          "amount": response.data.razorpay_amount,
-          "currency": "INR",
-          "name": "Evara Ecommerce",
-          "order_id": response.data.razorpay_order_id,
-          "handler": function (response) {
-            axios.post("{% url 'payment_success' %}", {
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_signature: response.razorpay_signature,
-              address_id: addressId
-            }, {
-              headers: { 'X-CSRFToken': getCookie('csrftoken') }
-            })
-            .then(res => {
-              if (res.data.success) {
-                window.location.href = "{% url 'order_success' %}";
-              } else {
-                alert(res.data.error || "Payment verification failed");
-              }
-            })
-            .catch(err => {
-              alert(err.response?.data?.error || "Error verifying payment");
-            });
-          },
-          "prefill": {
-            "name": "{{ request.user.username }}",
-            "email": "{{ request.user.email }}"
-          }
-        };
-        const rzp = new Razorpay(options);
-        rzp.on('payment.failed', function (response){
-          alert("Payment failed: " + response.error.description);
+        loadRazorpayScript().then(() => {
+          const options = {
+            "key": response.data.razorpay_merchant_key,
+            "amount": response.data.razorpay_amount,
+            "currency": "INR",
+            "name": "Evara Ecommerce",
+            "order_id": response.data.razorpay_order_id,
+            "callback_url": window.location.origin + "{% url 'payment_success' %}?address_id=" + selectedAddressId,
+            "redirect": true,
+            "prefill": {
+              "name": "{{ request.user.username }}",
+              "email": "{{ request.user.email }}"
+            },
+            "theme": {
+              "color": "#3399cc"
+            }
+          };
+          const rzp = new Razorpay(options);
+          rzp.open();
         });
-        rzp.open();
       } else if (response.data.success) {
         window.location.href = "{% url 'order_success' %}";
       } else {
@@ -376,6 +369,18 @@
     .catch(err => {
       alert(err.response?.data?.error || "Error placing order");
     });
+  }
+
+  document.getElementById("placeOrderBtn").addEventListener("click", function () {
+    const selectedAddress = document.querySelector('input[name="selected_address"]:checked');
+    const selectedPaymentMethod = document.querySelector('input[name="payment_method"]:checked');
+
+    if (!selectedAddress || !selectedPaymentMethod) {
+      alert("Please select an address and payment method.");
+      return;
+    }
+
+    proceedWithPayment(selectedAddress.value, selectedPaymentMethod.value);
   });
 </script>
 {% endblock %}
