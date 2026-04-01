@@ -337,13 +337,35 @@
           "currency": "INR",
           "name": "Evara Ecommerce",
           "order_id": response.data.razorpay_order_id,
-          "callback_url": "{% url 'payment_success' %}?address_id=" + addressId,
+          "handler": function (response) {
+            axios.post("{% url 'payment_success' %}", {
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_signature: response.razorpay_signature,
+              address_id: addressId
+            }, {
+              headers: { 'X-CSRFToken': getCookie('csrftoken') }
+            })
+            .then(res => {
+              if (res.data.success) {
+                window.location.href = "{% url 'order_success' %}";
+              } else {
+                alert(res.data.error || "Payment verification failed");
+              }
+            })
+            .catch(err => {
+              alert(err.response?.data?.error || "Error verifying payment");
+            });
+          },
           "prefill": {
             "name": "{{ request.user.username }}",
             "email": "{{ request.user.email }}"
           }
         };
         const rzp = new Razorpay(options);
+        rzp.on('payment.failed', function (response){
+          alert("Payment failed: " + response.error.description);
+        });
         rzp.open();
       } else if (response.data.success) {
         window.location.href = "{% url 'order_success' %}";

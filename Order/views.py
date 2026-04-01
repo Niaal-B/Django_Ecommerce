@@ -353,9 +353,9 @@ def payment_success(request):
             return JsonResponse({'error': 'Invalid JSON data'}, status=400)
         except Exception as e:
             logging.error(f"Payment success error: {str(e)}", exc_info=True)
-            if request.content_type == 'application/json':
+            if request.content_type == 'application/json' or request.headers.get('x-requested-with') == 'XMLHttpRequest':
                 return JsonResponse({'error': f'Payment verification failed: {str(e)}'}, status=400)
-            return JsonResponse({'error': f'Server error: {str(e)}'}, status=500)
+            return render(request, 'payment_failed.html', {'error': str(e)}) # Fallback for non-AJAX if any
             
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 
