@@ -319,6 +319,14 @@
   <!--=============== JAVASCRIPT FOR MODAL ===============-->
   <script>
     document.addEventListener("DOMContentLoaded", function () {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tabParam = urlParams.get('tab');
+      if (tabParam) {
+        const targetTab = document.querySelector(`[data-target="#${tabParam}"]`);
+        if (targetTab) {
+          targetTab.click();
+        }
+      }
       const modal = document.getElementById("modal");
       const openModalBtn = document.getElementById("openModalBtn");
       const closeModalBtn = document.getElementById("closeModalBtn");

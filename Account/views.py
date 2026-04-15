@@ -1,4 +1,5 @@
 from django.shortcuts import render,redirect,get_object_or_404
+from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib import messages
@@ -135,6 +136,8 @@ def add_address(request):
         )
 
         messages.success(request, 'Address added successfully!')
+        if not request.POST.get('next') or request.POST.get('next') == 'account':
+            return redirect(f"{reverse('account')}?tab=address")
         return redirect(next_url) 
 
     return redirect('account') 
@@ -186,6 +189,8 @@ def edit_address(request):
         address.save()
 
         messages.success(request, 'Address updated successfully.')
+        if not request.POST.get('next') or request.POST.get('next') == 'account':
+            return redirect(f"{reverse('account')}?tab=address")
         return redirect(next_url) 
 
     return redirect('account')
@@ -198,11 +203,11 @@ def delete_address(request, address_id):
 
     if request.method == 'POST':
         address.is_deleted = True
+        address.save()
         messages.success(request, 'Address deleted successfully!')
-        return redirect('account') 
+        return redirect(f"{reverse('account')}?tab=address") 
 
-
-    return redirect('account')
+    return redirect(f"{reverse('account')}?tab=address")
 
 
 
