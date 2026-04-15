@@ -191,6 +191,23 @@ def edit_product(request, product_id):
                 except InvalidOperation:
                     messages.error(request, "Offer must be a valid decimal number.")
                     return redirect('edit_product', product_id=product.id)
+            elif 'offer' in request.POST:
+                product.offer = None
+
+            # Handle image uploads
+            image1 = request.FILES.get('image1')
+            image2 = request.FILES.get('image2')
+            image3 = request.FILES.get('image3')
+
+            # Image format validation
+            valid_extensions = ('.png', '.jpg', '.jpeg', '.webp')
+            
+            for img, name in [(image1, 'image1'), (image2, 'image2'), (image3, 'image3')]:
+                if img:
+                    if not img.name.lower().endswith(valid_extensions):
+                        messages.error(request, "Only PNG, JPG, JPEG and WEBP image files are allowed for " + name)
+                        return redirect('edit_product', product_id=product.id)
+                    setattr(product, name, img)
 
             # Save the product instance with updated fields
             product.save()

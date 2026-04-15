@@ -77,6 +77,24 @@
                                             <label for="offer">Offer</label>
                                             <input type="text" id="offer" name="offer" value="{{ product.offer }}" class="form-control">
                                         </div>
+                                        
+                                        <!-- Image Uploads -->
+                                        <div class="form-group pb-3">
+                                            <label for="image1">Image 1</label><br>
+                                            <input type="file" id="image1" name="image1" class="form-control-file mb-2" accept="image/*">
+                                            <img src="{% if product.image1 %}{{ product.image1.url }}{% endif %}" alt="Image 1 Preview" class="img-fluid mt-2" style="max-width: 200px; max-height: 200px; border-radius: 8px; {% if not product.image1 %}display: none;{% endif %}">
+                                        </div>
+                                        <div class="form-group pb-3">
+                                            <label for="image2">Image 2</label><br>
+                                            <input type="file" id="image2" name="image2" class="form-control-file mb-2" accept="image/*">
+                                            <img src="{% if product.image2 %}{{ product.image2.url }}{% endif %}" alt="Image 2 Preview" class="img-fluid mt-2" style="max-width: 200px; max-height: 200px; border-radius: 8px; {% if not product.image2 %}display: none;{% endif %}">
+                                        </div>
+                                        <div class="form-group pb-3">
+                                            <label for="image3">Image 3</label><br>
+                                            <input type="file" id="image3" name="image3" class="form-control-file mb-2" accept="image/*">
+                                            <img src="{% if product.image3 %}{{ product.image3.url }}{% endif %}" alt="Image 3 Preview" class="img-fluid mt-2" style="max-width: 200px; max-height: 200px; border-radius: 8px; {% if not product.image3 %}display: none;{% endif %}">
+                                        </div>
+
                                         {% if errors %}
                                         <div class="alert alert-danger">
                                             <ul>
@@ -188,6 +206,7 @@
     
                 // Display the cropped image in the preview
                 currentInput.nextElementSibling.src = URL.createObjectURL(newFile);
+                currentInput.nextElementSibling.style.display = 'block';
     
                 cropImageModal.hide();
             });
