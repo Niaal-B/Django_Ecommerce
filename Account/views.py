@@ -88,6 +88,7 @@ def update_profile(request):
 @login_required
 def add_address(request):
     if request.method == 'POST':
+        next_url = request.POST.get('next', 'account')
         name = request.POST.get('name')
         address = request.POST.get('address')
         city = request.POST.get('city')
@@ -101,23 +102,23 @@ def add_address(request):
         # Validation for required fields
         if not name or not address or not city or not state or not country or not postcode or not phone:
             messages.error(request, 'All fields are required except additional info.')
-            return redirect('account')
+            return redirect(next_url)
 
        
         if not postcode.isdigit():
             messages.error(request, 'Postcode must be numeric.')
-            return redirect('account')
+            return redirect(next_url)
 
         
         phone_regex = re.compile(r'^\+?[1-9]\d{1,14}$')
         if not phone_regex.match(phone):
             messages.error(request, 'Invalid phone number format.')
-            return redirect('account')
+            return redirect(next_url)
 
         
         if email and not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
             messages.error(request, 'Invalid email address.')
-            return redirect('account')
+            return redirect(next_url)
 
         
         Address.objects.create(
@@ -134,7 +135,7 @@ def add_address(request):
         )
 
         messages.success(request, 'Address added successfully!')
-        return redirect('account') 
+        return redirect(next_url) 
 
     return redirect('account') 
 
@@ -142,6 +143,7 @@ def add_address(request):
 @login_required
 def edit_address(request):
     if request.method == 'POST':
+        next_url = request.POST.get('next', 'account')
         address_id = request.POST.get('id')
         address = get_object_or_404(Address, id=address_id)
 
@@ -157,19 +159,19 @@ def edit_address(request):
         
         if not postcode.isdigit():
             messages.error(request, 'Postcode must be numeric.')
-            return redirect('account')
+            return redirect(next_url)
 
        
         phone_regex = re.compile(r'^\+?[1-9]\d{1,14}$')
         if not phone_regex.match(phone):
             messages.error(request, 'Invalid phone number format.')
-            return redirect('account')
+            return redirect(next_url)
 
         
         email = request.POST.get('account')
         if email and not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
             messages.error(request, 'Invalid email address.')
-            return redirect('account')
+            return redirect(next_url)
 
        
         address.name = name
@@ -184,7 +186,7 @@ def edit_address(request):
         address.save()
 
         messages.success(request, 'Address updated successfully.')
-        return redirect('account') 
+        return redirect(next_url) 
 
     return redirect('account')
 

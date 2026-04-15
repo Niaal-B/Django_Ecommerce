@@ -97,6 +97,7 @@
       <h3 class="modal__header">Edit Address</h3>
       <form method="POST" action="{% url 'edit_address' %}" class="form grid">
         {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.path }}" />
         <input type="hidden" id="editId" name="id" />
         <input type="text" id="editName" name="name" placeholder="Name" class="form__input" required />
         <input type="text" id="editAddress" name="address" placeholder="Address" class="form__input" required />
@@ -116,6 +117,7 @@
       <h3 class="modal__header">Add New Address</h3>
       <form method="POST" action="{% url 'add_address' %}" class="form grid">
         {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.path }}" />
         <input type="text" name="name" placeholder="Name" class="form__input" required />
         <input type="text" name="address" placeholder="Address" class="form__input" required />
         <input type="text" id="postcode" name="postcode" placeholder="Postcode" class="form__input" required oninput="fetchLocationDetails()" />
