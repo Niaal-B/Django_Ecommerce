@@ -173,11 +173,45 @@
       </button>
     </div>
     </form>
-    <!--       
-        <div class="divider">
-          <i class="fi fi-rs-fingerprint"></i>
-        </div> -->
-
+    
+    <div class="row align-items-center mt-5">
+      <div class="col-lg-6">
+        <div class="cart__totals p-4 border rounded" style="background-color: #f9ecec; margin-top: 10px;">
+          <h3 class="mb-3">Cart Totals</h3>
+          <p><strong>Total:</strong> ₹{{ total_price|floatformat:2 }}</p>
+          {% if coupon %}
+          <p><strong>Discount ({{ coupon.code }}):</strong> -₹{{ discount|floatformat:2 }}</p>
+          <p><strong>Grand Total:</strong> ₹{{ grand_total|floatformat:2 }}</p>
+          {% endif %}
+        </div>
+      </div>
+      <div class="col-lg-6 mt-4 mt-lg-0">
+        <div class="cart__coupon">
+          {% if coupon %}
+            <div class="alert alert-success d-flex justify-content-between align-items-center">
+                <span>Coupon <strong>{{ coupon.code }}</strong> is active! Discount: ₹{{ discount }}</span>
+                <form action="{% url 'remove_coupon' %}" method="post" class="m-0">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+                </form>
+            </div>
+          {% else %}
+            <form action="{% url 'apply_coupon' %}" method="POST" class="d-flex">
+              {% csrf_token %}
+              <input type="text" name="coupon_code" placeholder="Enter Your Coupon" class="form-control me-2" style="max-width: 200px;" />
+              <button type="submit" class="btn btn-primary" style="margin-left: 10px;"><i class="fi-rs-label"></i> Apply Coupon</button>
+            </form>
+          {% endif %}
+          
+          {% if messages %}
+            {% for message in messages %}
+                <p class="text-{{ message.tags }} mt-2">{{ message }}</p>
+            {% endfor %}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    
     {% else %}
     <div class="cart__empty-message">
       <h2>Your cart is empty!</h2>

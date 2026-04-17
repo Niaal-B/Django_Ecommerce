@@ -204,6 +204,14 @@
                 <span class="table__price">{% if delivery_charge == 0 %}Free Shipping{% else %}₹{{ delivery_charge|floatformat:0 }}{% endif %} </span>
               </td>
             </tr>
+            {% if coupon %}
+            <tr>
+              <td><span class="order__subtitle" style="font-weight: bold; color: #28a745;">Discount ({{ coupon.code }})</span></td>
+              <td colspan="2">
+                <span class="table__price" style="font-weight: bold; color: #28a745;">-₹{{ discount|floatformat:2 }}</span>
+              </td>
+            </tr>
+            {% endif %}
             <tr>
               <td><span class="order__subtitle" style="font-weight: 700; font-size: 1.1rem;">Total</span></td>
               <td colspan="2">

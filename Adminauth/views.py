@@ -6,7 +6,7 @@ from django.contrib.auth.decorators import user_passes_test, login_required
 from django.db.models import Sum, Count, F
 from django.db.models.functions import ExtractMonth
 from django.http import JsonResponse
-from Order.models import Order, OrderItem
+from Order.models import Order, OrderItem, Coupon
 from Products.models import Product, SizeVariant
 from Categories.models import Category
 from Account.models import Address
@@ -146,3 +146,63 @@ def unblock_user(request, user_id):
 def admin_logout(request):
     logout(request)
     return redirect('admin_login')
+
+@user_passes_test(is_admin)
+def coupon_management(request):
+    coupons = Coupon.objects.all().order_by('-id')
+    return render(request, 'admin/coupon.html', {'coupons': coupons})
+
+@user_passes_test(is_admin)
+def add_coupon(request):
+    if request.method == 'POST':
+        code = request.POST.get('code')
+        discount_value = request.POST.get('discount_value')
+        min_purchase_amount = request.POST.get('min_purchase_amount')
+        valid_from = request.POST.get('valid_from')
+        valid_to = request.POST.get('valid_to')
+        usage_limit = request.POST.get('usage_limit')
+        
+        try:
+            Coupon.objects.create(
+                code=code.upper(),
+                discount_value=discount_value,
+                min_purchase_amount=min_purchase_amount,
+                valid_from=valid_from,
+                valid_to=valid_to,
+                usage_limit=usage_limit
+            )
+            messages.success(request, 'Coupon has been added successfully.')
+            return redirect('coupon_management')
+        except Exception as e:
+            messages.error(request, f'Failed to add coupon: {e}')
+            return redirect('add_coupon')
+            
+    return render(request, 'admin/add_coupon.html')
+
+@user_passes_test(is_admin)
+def edit_coupon(request, coupon_id):
+    coupon = get_object_or_404(Coupon, id=coupon_id)
+    if request.method == 'POST':
+        coupon.code = request.POST.get('code').upper()
+        coupon.discount_value = request.POST.get('discount_value')
+        coupon.min_purchase_amount = request.POST.get('min_purchase_amount')
+        coupon.valid_from = request.POST.get('valid_from')
+        coupon.valid_to = request.POST.get('valid_to')
+        coupon.usage_limit = request.POST.get('usage_limit')
+        try:
+            coupon.save()
+            messages.success(request, 'Coupon updated successfully.')
+            return redirect('coupon_management')
+        except Exception as e:
+            messages.error(request, f'Failed to update coupon: {e}')
+            return redirect('edit_coupon', coupon_id=coupon_id)
+    return render(request, 'admin/edit_coupon.html', {'coupon': coupon})
+
+@user_passes_test(is_admin)
+def delete_coupon(request, coupon_id):
+    coupon = get_object_or_404(Coupon, id=coupon_id)
+    if request.method == "POST":
+        coupon.active = not coupon.active
+        coupon.save()
+        messages.success(request, 'Coupon status updated successfully.')
+    return redirect('coupon_management')

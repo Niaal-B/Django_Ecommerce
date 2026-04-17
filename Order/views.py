@@ -15,6 +15,7 @@ from .models import Order, OrderItem
 from Products.models import Product, SizeVariant
 from Wallet.models import Wallet, WalletTransaction
 from Adminauth.views import is_admin 
+from .models import Coupon 
 
 @login_required
 def place_order(request):
@@ -53,10 +54,29 @@ def place_order(request):
         delivery_charge = settings.DELIVERY_CHARGE if total < settings.FREE_SHIPPING_THRESHOLD else Decimal('0.00')
         total += delivery_charge
         
+        # APPLY COUPON LOGIC
+        coupon_id = request.session.get('coupon_id')
+        applied_coupon = None
+        discount_amount = Decimal('0.00')
+        
+        if coupon_id:
+            try:
+                applied_coupon = Coupon.objects.get(id=coupon_id, active=True)
+                if total >= applied_coupon.min_purchase_amount:
+                    discount_amount = Decimal(str(applied_coupon.discount_value))
+                    total = max(Decimal('0.00'), total - discount_amount)
+                else:
+                    del request.session['coupon_id']
+                    applied_coupon = None
+            except Coupon.DoesNotExist:
+                del request.session['coupon_id']
+        
     except Cart.DoesNotExist:
         cart_items = CartItem.objects.none()
         total = Decimal('0.00')
         delivery_charge = Decimal('0.00')
+        applied_coupon = None
+        discount_amount = Decimal('0.00')
     
     if request.method == "POST":
         try:
@@ -102,8 +122,14 @@ def place_order(request):
                         payment_method="razorpay",
                         total_price=total,
                         payment_status="pending",
-                        razorpay_order_id=razorpay_order_id
+                        razorpay_order_id=razorpay_order_id,
+                        coupon_code=applied_coupon.code if applied_coupon else None,
+                        discount=discount_amount
                     )
+                    
+                    if applied_coupon:
+                        applied_coupon.used_count += 1
+                        applied_coupon.save()
 
                     for item in cart_items:
                         OrderItem.objects.create(
@@ -147,8 +173,14 @@ def place_order(request):
                     payment_method="wallet",
                     total_price=total,
                     payment_status="paid",
-                    status="confirmed"
+                    status="confirmed",
+                    coupon_code=applied_coupon.code if applied_coupon else None,
+                    discount=discount_amount
                 )
+
+                if applied_coupon:
+                    applied_coupon.used_count += 1
+                    applied_coupon.save()
                 
                 # Create Wallet Transaction
                 WalletTransaction.objects.create(
@@ -182,7 +214,13 @@ def place_order(request):
                 address=address,
                 payment_method=payment_method,
                 total_price=total,
+                coupon_code=applied_coupon.code if applied_coupon else None,
+                discount=discount_amount
             )
+
+            if applied_coupon:
+                applied_coupon.used_count += 1
+                applied_coupon.save()
 
             for item in cart_items:
                 try:
@@ -218,7 +256,9 @@ def place_order(request):
         'cart_items': cart_items,
         'total': total,
         'delivery_charge': delivery_charge,
-        'wallet': user_wallet
+        'wallet': user_wallet,
+        'coupon': applied_coupon,
+        'discount': discount_amount
     }
     return render(request, 'checkout.html', context)
 

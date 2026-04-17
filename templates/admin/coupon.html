@@ -1,0 +1,95 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Coupons Management</title>
+    <!-- plugins:css -->
+    <link rel="stylesheet" href="{% static 'admin/vendors/mdi/css/materialdesignicons.min.css' %}">
+    <link rel="stylesheet" href="{% static 'admin/vendors/css/vendor.bundle.base.css' %}">
+    <!-- inject:css -->
+    <link rel="stylesheet" href="{% static 'admin/css/style.css' %}">
+    <!-- End layout styles -->
+    <link rel="shortcut icon" href="{% static 'admin/images/favicon.png' %}">
+  </head>
+  <body>
+    <div class="container-scroller">
+      {% include 'admin/sidebar.html' %}
+      <div class="container-fluid page-body-wrapper">
+        {% include 'admin/navbar.html' %}
+        <div class="main-panel">
+          <div class="content-wrapper">
+            <div class="row">
+              <div class="col-12 grid-margin stretch-card">
+                <div class="card">
+                  <div class="card-body">
+                    <h4 class="card-title">Coupon Management</h4>
+                    <div class="d-flex justify-content-end mb-3">
+                        <a href="{% url 'add_coupon' %}" class="btn btn-primary">+ Add New Coupon</a>
+                    </div>
+                    {% if messages %}
+                      {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                      {% endfor %}
+                    {% endif %}
+                    <div class="table-responsive">
+                      <table class="table">
+                        <thead>
+                          <tr>
+                            <th>Code</th>
+                            <th>Discount</th>
+                            <th>Min Purchase</th>
+                            <th>Valid Dates</th>
+                            <th>Usage</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {% for coupon in coupons %}
+                          <tr>
+                            <td>{{ coupon.code }}</td>
+                            <td>${{ coupon.discount_value }}</td>
+                            <td>${{ coupon.min_purchase_amount }}</td>
+                            <td>{{ coupon.valid_from }} to {{ coupon.valid_to }}</td>
+                            <td>{{ coupon.used_count }} / {{ coupon.usage_limit }}</td>
+                            <td>
+                                {% if coupon.active %}
+                                    <span class="badge badge-success">Active</span>
+                                {% else %}
+                                    <span class="badge badge-danger">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                              <a href="{% url 'edit_coupon' coupon.id %}" class="btn btn-info btn-sm">Edit</a>
+                              <form action="{% url 'delete_coupon' coupon.id %}" method="POST" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-{% if coupon.active %}danger{% else %}success{% endif %} btn-sm">
+                                  {% if coupon.active %}Disable{% else %}Enable{% endif %}
+                                </button>
+                              </form>
+                            </td>
+                          </tr>
+                          {% empty %}
+                          <tr>
+                            <td colspan="7" class="text-center">No coupons found.</td>
+                          </tr>
+                          {% endfor %}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="{% static 'admin/vendors/js/vendor.bundle.base.js' %}"></script>
+    <script src="{% static 'admin/js/off-canvas.js' %}"></script>
+    <script src="{% static 'admin/js/hoverable-collapse.js' %}"></script>
+    <script src="{% static 'admin/js/misc.js' %}"></script>
+  </body>
+</html>

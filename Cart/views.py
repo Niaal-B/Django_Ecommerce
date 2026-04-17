@@ -3,8 +3,9 @@ from django.http import JsonResponse
 import json
 from .models import Cart,CartItem
 from Products.models import Product
-
-
+from Order.models import Coupon
+from django.contrib import messages
+from django.utils import timezone
 def cart(request):
     if request.user.is_authenticated:
         cart, created = Cart.objects.get_or_create(user=request.user)
@@ -17,12 +18,37 @@ def cart(request):
                 if quantity:
                     item.quantity = int(float(quantity))  
                     item.save()
+                    
+        total_price = sum(item.total_price() for item in user_cart)
+        
+        # Coupon Logic
+        coupon_id = request.session.get('coupon_id')
+        discount = 0
+        coupon = None
+        if coupon_id:
+            try:
+                coupon = Coupon.objects.get(id=coupon_id, active=True)
+                if total_price >= coupon.min_purchase_amount:
+                    discount = coupon.discount_value
+                else:
+                    messages.warning(request, f"Coupon removed because minimum purchase amount is {coupon.min_purchase_amount}")
+                    del request.session['coupon_id']
+                    coupon = None
+            except Coupon.DoesNotExist:
+                del request.session['coupon_id']
+        
+        grand_total = max(0, float(total_price) - float(discount))
+
         for item in user_cart:
             item.stock = item.product.size_variants.filter(size=item.size).first().stock if item.product.size_variants.filter(size=item.size).exists() else 0
         
         context = {
             'items': user_cart,
             'items_count' : items_count,
+            'total_price': total_price,
+            'discount': discount,
+            'grand_total': grand_total,
+            'coupon': coupon,
         }
     else:
         context = {
@@ -76,3 +102,44 @@ def remove_item_from_cart(request):
 def update_cart(request):
 
     return render(request,'cart.html')
+
+def apply_coupon(request):
+    if request.method == 'POST':
+        code = request.POST.get('coupon_code')
+        if not code:
+            messages.error(request, "Please enter a valid coupon code.")
+            return redirect('cart')
+            
+        try:
+            coupon = Coupon.objects.get(code__iexact=code, active=True)
+            
+            # Use local date for comparisons
+            curr_date = timezone.now().date()
+            if not (coupon.valid_from <= curr_date <= coupon.valid_to):
+                messages.error(request, "This coupon is expired or not yet valid.")
+                return redirect('cart')
+            
+            if coupon.used_count >= coupon.usage_limit:
+                messages.error(request, "This coupon's usage limit has been reached.")
+                return redirect('cart')
+                
+            cart = Cart.objects.get(user=request.user)
+            total_price = sum(item.total_price() for item in cart.items.all())
+            
+            if total_price < coupon.min_purchase_amount:
+                messages.error(request, f"Minimum purchase amount of {coupon.min_purchase_amount} required.")
+                return redirect('cart')
+                
+            request.session['coupon_id'] = coupon.id
+            messages.success(request, f"Coupon {coupon.code} applied successfully!")
+            
+        except Coupon.DoesNotExist:
+            messages.error(request, "Invalid coupon code.")
+            
+    return redirect('cart')
+
+def remove_coupon(request):
+    if 'coupon_id' in request.session:
+        del request.session['coupon_id']
+        messages.success(request, "Coupon removed.")
+    return redirect('cart')
