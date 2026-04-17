@@ -292,6 +292,15 @@ def update_variant(request,variant_id):
         context = {'variant': variant}
         return render(request,'admin/edit_variant.html',context)
 
+@user_passes_test(is_admin)
+def delete_variant(request, variant_id):
+    variant = get_object_or_404(SizeVariant, id=variant_id)
+    product_id = variant.product.id
+    if request.method == 'POST':
+        variant.delete()
+        messages.success(request, 'Variant deleted successfully!')
+        return redirect('variant', product_id=product_id)
+    return redirect('variant', product_id=product_id)
 
 def product_details(request,product_id):
     product = Product.objects.get(id = product_id)
