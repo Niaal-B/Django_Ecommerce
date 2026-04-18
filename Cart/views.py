@@ -104,11 +104,12 @@ def update_cart(request):
     return render(request,'cart.html')
 
 def apply_coupon(request):
+    referer = request.META.get('HTTP_REFERER', 'cart')
     if request.method == 'POST':
         code = request.POST.get('coupon_code')
         if not code:
             messages.error(request, "Please enter a valid coupon code.")
-            return redirect('cart')
+            return redirect(referer)
             
         try:
             coupon = Coupon.objects.get(code__iexact=code, active=True)
@@ -117,18 +118,18 @@ def apply_coupon(request):
             curr_date = timezone.now().date()
             if not (coupon.valid_from <= curr_date <= coupon.valid_to):
                 messages.error(request, "This coupon is expired or not yet valid.")
-                return redirect('cart')
+                return redirect(referer)
             
             if coupon.used_count >= coupon.usage_limit:
                 messages.error(request, "This coupon's usage limit has been reached.")
-                return redirect('cart')
+                return redirect(referer)
                 
             cart = Cart.objects.get(user=request.user)
             total_price = sum(item.total_price() for item in cart.items.all())
             
             if total_price < coupon.min_purchase_amount:
                 messages.error(request, f"Minimum purchase amount of {coupon.min_purchase_amount} required.")
-                return redirect('cart')
+                return redirect(referer)
                 
             request.session['coupon_id'] = coupon.id
             messages.success(request, f"Coupon {coupon.code} applied successfully!")
@@ -136,10 +137,11 @@ def apply_coupon(request):
         except Coupon.DoesNotExist:
             messages.error(request, "Invalid coupon code.")
             
-    return redirect('cart')
+    return redirect(referer)
 
 def remove_coupon(request):
+    referer = request.META.get('HTTP_REFERER', 'cart')
     if 'coupon_id' in request.session:
         del request.session['coupon_id']
         messages.success(request, "Coupon removed.")
-    return redirect('cart')
+    return redirect(referer)

@@ -221,6 +221,30 @@
           </tbody>
         </table>
         
+        <div class="checkout__coupon" style="margin-top: 20px;">
+          {% if coupon %}
+            <div class="alert alert-success" style="padding: 10px; border: 1px solid #28a745; border-radius: 5px; background: #e8f5e9; display: flex; justify-content: space-between; align-items: center;">
+                <span>Coupon <strong>{{ coupon.code }}</strong> is active!</span>
+                <form action="{% url 'remove_coupon' %}" method="post" class="m-0">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger btn-sm" style="padding: 5px 10px; font-size: 0.8rem; border-radius: 4px;">Remove</button>
+                </form>
+            </div>
+          {% else %}
+            <form action="{% url 'apply_coupon' %}" method="POST" style="display: flex; gap: 10px;">
+              {% csrf_token %}
+              <input type="text" name="coupon_code" placeholder="Enter Coupon Code" class="form__input" style="flex: 1; margin: 0;" />
+              <button type="submit" class="btn btn--sm" style="padding: 0 20px; white-space: nowrap;">Apply</button>
+            </form>
+          {% endif %}
+          
+          {% if messages %}
+            {% for message in messages %}
+                <p class="text-{{ message.tags }}" style="font-size: 0.85rem; margin-top: 8px; color: {% if message.tags == 'error' %}#dc3545{% else %}#28a745{% endif %};">{{ message }}</p>
+            {% endfor %}
+          {% endif %}
+        </div>
+        
         <div class="payment__methods" style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
           <h4 class="section__title" style="font-size: 1.1rem; margin-bottom: 15px;">Payment Method</h4>
           <div class="payment__options grid" style="gap: 10px; margin-bottom: 25px;">
