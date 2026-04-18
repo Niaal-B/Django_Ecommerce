@@ -61,8 +61,13 @@ def place_order(request):
         
         if coupon_id:
             try:
+                from django.utils import timezone
                 applied_coupon = Coupon.objects.get(id=coupon_id, active=True)
-                if total >= applied_coupon.min_purchase_amount:
+                curr_date = timezone.now().date()
+                if not (applied_coupon.valid_from <= curr_date <= applied_coupon.valid_to) or applied_coupon.used_count >= applied_coupon.usage_limit:
+                    del request.session['coupon_id']
+                    applied_coupon = None
+                elif total >= applied_coupon.min_purchase_amount:
                     discount_amount = Decimal(str(applied_coupon.discount_value))
                     total = max(Decimal('0.00'), total - discount_amount)
                 else:
@@ -130,6 +135,8 @@ def place_order(request):
                     if applied_coupon:
                         applied_coupon.used_count += 1
                         applied_coupon.save()
+                    if 'coupon_id' in request.session:
+                        del request.session['coupon_id']
 
                     for item in cart_items:
                         OrderItem.objects.create(
@@ -181,6 +188,8 @@ def place_order(request):
                 if applied_coupon:
                     applied_coupon.used_count += 1
                     applied_coupon.save()
+                if 'coupon_id' in request.session:
+                    del request.session['coupon_id']
                 
                 # Create Wallet Transaction
                 WalletTransaction.objects.create(
@@ -221,6 +230,8 @@ def place_order(request):
             if applied_coupon:
                 applied_coupon.used_count += 1
                 applied_coupon.save()
+            if 'coupon_id' in request.session:
+                del request.session['coupon_id']
 
             for item in cart_items:
                 try:
