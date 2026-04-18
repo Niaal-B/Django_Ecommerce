@@ -22,5 +22,6 @@ class CartItem(models.Model):
         return f'{self.quantity} of {self.product.name} ({self.size}) in cart of {self.cart.user.username}'
 
     def total_price(self):
-        return self.quantity * self.product.price
+        from decimal import Decimal
+        return Decimal(str(self.quantity)) * self.product.price
 

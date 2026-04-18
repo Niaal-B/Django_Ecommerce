@@ -27,7 +27,9 @@ def shop(request):
         products = products.order_by('price')
     elif sort == 'price_desc':
         products = products.order_by('-price')
-        
+    else:
+        products = products.order_by('-created_at')
+
 
     min_price = request.GET.get('min_price')
     max_price = request.GET.get('max_price')
