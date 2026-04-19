@@ -20,7 +20,10 @@
             <th>Size</th>
             <th>Quantity</th>
             <th>Price</th>
+            <th>Discount</th>
             <th>Total</th>
+            <th>Status</th>
+            <th>Action</th>
           </tr>
         </thead>
         <tbody>
@@ -30,7 +33,24 @@
             <td>{{ item.size_variant.size }}</td>
             <td>{{ item.quantity }}</td>
             <td>₹{{ item.price }}</td>
+            <td>₹{{ item.discount }}</td>
             <td>₹{{ item.total_price }}</td>
+            <td>
+                <span class="badge {% if item.status == 'canceled' %}bg-danger{% elif item.status == 'delivered' %}bg-success{% else %}bg-info{% endif %}">
+                    {{ item.get_status_display }}
+                </span>
+            </td>
+            <td>
+                {% if order.is_cancellable and item.status != 'canceled' %}
+                    <a href="{% url 'cancel_order_item' item.id %}" 
+                       class="btn btn-sm btn-danger" 
+                       onclick="return confirm('Are you sure you want to cancel this item?')">
+                        Cancel
+                    </a>
+                {% else %}
+                    -
+                {% endif %}
+            </td>
           </tr>
           {% endfor %}
         </tbody>

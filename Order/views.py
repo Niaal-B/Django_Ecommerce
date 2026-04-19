@@ -76,6 +76,15 @@ def place_order(request):
             except Coupon.DoesNotExist:
                 del request.session['coupon_id']
         
+        # Calculate prorated discount for each cart item
+        total_items_price = sum(item.subtotal for item in cart_items)
+        if discount_amount > 0 and total_items_price > 0:
+            for item in cart_items:
+                item.computed_discount = round((item.subtotal / total_items_price) * discount_amount, 2)
+        else:
+            for item in cart_items:
+                item.computed_discount = Decimal('0.00')
+        
     except Cart.DoesNotExist:
         cart_items = CartItem.objects.none()
         total = Decimal('0.00')
@@ -145,7 +154,8 @@ def place_order(request):
                             quantity=item.quantity,
                             price=item.product.offer if item.product.offer and item.product.offer > 0 else item.product.price,
                             size_variant=SizeVariant.objects.get(product=item.product, size=item.size),
-                            status="pending"
+                            status="pending",
+                            discount=getattr(item, 'computed_discount', Decimal('0.00'))
                         )
 
                     context = {
@@ -211,7 +221,8 @@ def place_order(request):
                         quantity=item.quantity,
                         price=price,
                         size_variant=size_variant,
-                        status="confirmed"
+                        status="confirmed",
+                        discount=getattr(item, 'computed_discount', Decimal('0.00'))
                     )
                 
                 cart_items.delete()
@@ -248,7 +259,8 @@ def place_order(request):
                         product=item.product,
                         quantity=item.quantity,
                         price=price,
-                        size_variant=size_variant
+                        size_variant=size_variant,
+                        discount=getattr(item, 'computed_discount', Decimal('0.00'))
                     )
                 except SizeVariant.DoesNotExist:
                     return JsonResponse({"error": f"Size variant not found for {item.product.name} (Size: {item.size})."}, status=400)

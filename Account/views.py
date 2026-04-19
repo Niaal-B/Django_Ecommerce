@@ -329,3 +329,50 @@ def return_order(request, order_id):
         return redirect('account')
 
     return redirect('account')
+
+@login_required
+def cancel_order_item(request, item_id):
+    item = get_object_or_404(OrderItem, id=item_id, order__user=request.user)
+    order = item.order
+
+    if not order.is_cancellable:
+        messages.error(request, f"Cannot cancel item because the order is in '{order.get_status_display()}' status.")
+        return redirect('view_order_items', order_id=order.id)
+
+    if item.status == 'canceled':
+        messages.error(request, "This item is already canceled.")
+        return redirect('view_order_items', order_id=order.id)
+
+    # Change item status
+    item.status = 'canceled'
+    item.save()
+
+    # Restore stock
+    if item.size_variant:
+        item.size_variant.stock += item.quantity
+        item.size_variant.save()
+
+    # Determine Refund
+    if order.payment_status == 'paid' or order.payment_method == 'razorpay':
+        refund_amount = (item.price * item.quantity) - item.discount
+        user_wallet, created = Wallet.objects.get_or_create(user=request.user)
+        user_wallet.balance += refund_amount
+        user_wallet.save()
+        
+        WalletTransaction.objects.create(
+            wallet=user_wallet,
+            amount=refund_amount,
+            transaction_type='CREDIT',
+            description=f"Refund for canceled item ({item.product.name}) in Order #{order.id}"
+        )
+        messages.success(request, f"Item canceled. Amount ₹{refund_amount} has been credited to your wallet.")
+    else:
+        messages.success(request, f"Item '{item.product.name}' has been successfully canceled.")
+
+    # Check if all items are canceled to update parent order status
+    remaining_items = order.items.exclude(status='canceled')
+    if not remaining_items.exists():
+        order.status = 'canceled'
+        order.save()
+
+    return redirect('view_order_items', order_id=order.id)
