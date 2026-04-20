@@ -439,40 +439,12 @@ def return_order_item(request, item_id):
 
         try:
             with transaction.atomic():
-                # Change item status
-                item.status = 'returned'
+                # Change item status to request
+                item.status = 'return_requested'
                 item.return_reason = return_reason
                 item.save()
 
-                # Process Refund for single item
-                refund_amount = (item.price * item.quantity) - item.discount
-                user_wallet, created = Wallet.objects.get_or_create(user=request.user)
-                user_wallet.balance += refund_amount
-                user_wallet.save()
-
-                WalletTransaction.objects.create(
-                    wallet=user_wallet,
-                    amount=refund_amount,
-                    transaction_type='CREDIT',
-                    description=f"Refund for returned item ({item.product.name}) in Order #{order.id}"
-                )
-
-                # Restore Stock
-                if item.size_variant:
-                    item.size_variant.stock += item.quantity
-                    item.size_variant.save()
-
-                # Check if all other items are returned or canceled
-                # if so, update parent order status to returned
-                active_items = order.items.exclude(status__in=['returned', 'canceled'])
-                if not active_items.exists():
-                    order.status = 'returned'
-                    # Optional: preserve existing order.return_reason or overwrite
-                    if not order.return_reason:
-                        order.return_reason = "All items returned"
-                    order.save()
-
-                messages.success(request, f"Item returned successfully. Amount ₹{refund_amount} has been credited to your wallet.")
+                messages.success(request, f"Return request for '{item.product.name}' has been submitted and is pending admin approval.")
         except Exception as e:
             logger.error(f"Error returning order item {item_id} for user {request.user.id}: {str(e)}", exc_info=True)
             messages.error(request, "An error occurred while processing your return request.")

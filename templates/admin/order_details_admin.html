@@ -153,7 +153,12 @@
                                                     <tbody>
                                                         {% for item in order_items %}
                                                         <tr>
-                                                            <td>{{ item.product.name }}</td>
+                                                            <td>
+                                                                {{ item.product.name }}
+                                                                {% if item.status == 'return_requested' %}
+                                                                    <br><small class="text-danger"><strong>Return Reason:</strong> {{ item.return_reason }}</small>
+                                                                {% endif %}
+                                                            </td>
                                                             <td>{{ item.quantity }}</td>
                                                             <td>₹{{ item.price }}</td>
                                                             <td>
@@ -162,6 +167,12 @@
                                                                     <option value="{{ key }}" {% if item.status == key %}selected{% endif %}>{{ label }}</option>
                                                                     {% endfor %}
                                                                 </select>
+                                                                {% if item.status == 'return_requested' %}
+                                                                <div class="mt-2">
+                                                                    <a href="{% url 'approve_return_request' item.id %}" class="btn btn-sm btn-success w-100 mb-1" onclick="return confirm('Approve this return and process refund?')">Approve Return</a>
+                                                                    <a href="{% url 'reject_return_request' item.id %}" class="btn btn-sm btn-danger w-100" onclick="return confirm('Reject this return request?')">Reject Return</a>
+                                                                </div>
+                                                                {% endif %}
                                                             </td>
                                                             <td>₹{{ item.subtotal }}</td>
                                                         </tr>

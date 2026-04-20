@@ -26,6 +26,8 @@ class Order(models.Model):
         ('out_for_delivery', 'Out For Delivery'),
         ('delivered', 'Delivered'),
         ('canceled', 'Canceled'),
+        ('return_requested', 'Return Requested'),
+        ('return_rejected', 'Return Rejected'),
         ('returned', 'Returned'),
     ]
 

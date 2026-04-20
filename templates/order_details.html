@@ -68,7 +68,7 @@
             <td>₹{{ item.discount }}</td>
             <td>₹{{ item.total_price }}</td>
             <td>
-                <span class="badge {% if item.status == 'canceled' %}bg-danger{% elif item.status == 'delivered' %}bg-success{% else %}bg-info{% endif %}">
+                <span class="badge {% if item.status == 'canceled' or item.status == 'return_rejected' %}bg-danger{% elif item.status == 'delivered' %}bg-success{% elif item.status == 'return_requested' %}bg-warning text-dark{% else %}bg-info{% endif %}">
                     {{ item.get_status_display }}
                 </span>
             </td>
@@ -85,6 +85,10 @@
                     <span style="color: #ff4d4d;">Canceled</span>
                 {% elif item.status == 'returned' %}
                     <span style="color: #ff9900;">Returned</span>
+                {% elif item.status == 'return_requested' %}
+                    <span style="color: #ff9900;">Requested</span>
+                {% elif item.status == 'return_rejected' %}
+                    <span style="color: #ff4d4d;">Rejected</span>
                 {% else %}
                     -
                 {% endif %}

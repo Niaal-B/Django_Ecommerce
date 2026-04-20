@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
@@ -509,3 +510,69 @@ def razorpay_webhook(request):
             return JsonResponse({'error': str(e)}, status=400)
             
     return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+@login_required
+def approve_return_request(request, item_id):
+    if not request.user.is_superuser:
+        return redirect('admin_login')
+
+    item = get_object_or_404(OrderItem, id=item_id)
+    order = item.order
+
+    if item.status != 'return_requested':
+        messages.error(request, "This item has not requested a return.")
+        return redirect('order-view', order_id=order.id)
+
+    try:
+        with transaction.atomic():
+            item.status = 'returned'
+            item.save()
+
+            # Process Refund for single item
+            refund_amount = (item.price * item.quantity) - item.discount
+            user_wallet, created = Wallet.objects.get_or_create(user=order.user)
+            user_wallet.balance += refund_amount
+            user_wallet.save()
+
+            WalletTransaction.objects.create(
+                wallet=user_wallet,
+                amount=refund_amount,
+                transaction_type='CREDIT',
+                description=f"Refund for returned item ({item.product.name}) in Order #{order.id}"
+            )
+
+            # Restore Stock
+            if item.size_variant:
+                item.size_variant.stock += item.quantity
+                item.size_variant.save()
+
+            # Check if all other items are returned or canceled
+            active_items = order.items.exclude(status__in=['returned', 'canceled'])
+            if not active_items.exists():
+                order.status = 'returned'
+                if not order.return_reason:
+                    order.return_reason = "All items returned automatically"
+                order.save()
+
+            messages.success(request, f"Return requested approved. ₹{refund_amount} refunded to user.")
+    except Exception as e:
+        messages.error(request, "An error occurred while approving the return.")
+
+    return redirect('order-view', order_id=order.id)
+
+@login_required
+def reject_return_request(request, item_id):
+    if not request.user.is_superuser:
+        return redirect('admin_login')
+        
+    item = get_object_or_404(OrderItem, id=item_id)
+    
+    if item.status != 'return_requested':
+        messages.error(request, "This item has not requested a return.")
+        return redirect('order-view', order_id=item.order.id)
+
+    item.status = 'return_rejected'
+    item.save()
+
+    messages.info(request, "Return request rejected successfully.")
+    return redirect('order-view', order_id=item.order.id)
