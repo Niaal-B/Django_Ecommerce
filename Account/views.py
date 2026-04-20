@@ -413,3 +413,68 @@ def cancel_order_item(request, item_id):
         messages.error(request, "An error occurred while canceling the item.")
 
     return redirect('view_order_items', order_id=order.id)
+
+@login_required
+def return_order_item(request, item_id):
+    item = get_object_or_404(OrderItem, id=item_id, order__user=request.user)
+    order = item.order
+
+    if request.method == 'POST':
+        if not order.is_returnable:
+            messages.error(request, "This item cannot be returned because the order is not delivered.")
+            return redirect('view_order_items', order_id=order.id)
+
+        return_reason = request.POST.get('return_reason')
+        if not return_reason:
+            messages.error(request, "Please provide a reason for the return.")
+            return redirect('view_order_items', order_id=order.id)
+
+        if item.status == 'returned':
+            messages.error(request, "This item has already been returned.")
+            return redirect('view_order_items', order_id=order.id)
+            
+        if item.status == 'canceled':
+            messages.error(request, "Cannot return a canceled item.")
+            return redirect('view_order_items', order_id=order.id)
+
+        try:
+            with transaction.atomic():
+                # Change item status
+                item.status = 'returned'
+                item.return_reason = return_reason
+                item.save()
+
+                # Process Refund for single item
+                refund_amount = (item.price * item.quantity) - item.discount
+                user_wallet, created = Wallet.objects.get_or_create(user=request.user)
+                user_wallet.balance += refund_amount
+                user_wallet.save()
+
+                WalletTransaction.objects.create(
+                    wallet=user_wallet,
+                    amount=refund_amount,
+                    transaction_type='CREDIT',
+                    description=f"Refund for returned item ({item.product.name}) in Order #{order.id}"
+                )
+
+                # Restore Stock
+                if item.size_variant:
+                    item.size_variant.stock += item.quantity
+                    item.size_variant.save()
+
+                # Check if all other items are returned or canceled
+                # if so, update parent order status to returned
+                active_items = order.items.exclude(status__in=['returned', 'canceled'])
+                if not active_items.exists():
+                    order.status = 'returned'
+                    # Optional: preserve existing order.return_reason or overwrite
+                    if not order.return_reason:
+                        order.return_reason = "All items returned"
+                    order.save()
+
+                messages.success(request, f"Item returned successfully. Amount ₹{refund_amount} has been credited to your wallet.")
+        except Exception as e:
+            logger.error(f"Error returning order item {item_id} for user {request.user.id}: {str(e)}", exc_info=True)
+            messages.error(request, "An error occurred while processing your return request.")
+
+    return redirect('view_order_items', order_id=order.id)

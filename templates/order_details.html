@@ -3,6 +3,38 @@
 {% block title %}Accounts{% endblock %}
 {% block content %} 
 
+<style>
+  .modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    padding-top: 100px;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.5);
+  }
+
+  .modal__content {
+    background-color: #fff;
+    margin: auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 50%;
+    position: relative;
+    border-radius: 8px;
+  }
+
+  .modal__close {
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    font-size: 25px;
+    cursor: pointer;
+  }
+</style>
 
 <div class="tab__content" content id="orders"></div>
     <h3 class="tab__header">Order Details</h3>
@@ -47,6 +79,12 @@
                        onclick="return confirm('Are you sure you want to cancel this item?')">
                         Cancel
                     </a>
+                {% elif order.is_returnable and item.status == 'delivered' %}
+                    <a href="javascript:void(0)" class="btn btn-sm btn-warning" onclick="openReturnItemModal('{{ item.id }}')" style="color: #ff9900;">Return</a>
+                {% elif item.status == 'canceled' %}
+                    <span style="color: #ff4d4d;">Canceled</span>
+                {% elif item.status == 'returned' %}
+                    <span style="color: #ff9900;">Returned</span>
                 {% else %}
                     -
                 {% endif %}
@@ -60,7 +98,38 @@
 
 <p><a href="{% url 'account' %}">Back to your account</a></p>
 
+<!-- Return Order Item Modal -->
+<div id="returnItemModal" class="modal">
+  <div class="modal__content">
+    <span class="modal__close" onclick="document.getElementById('returnItemModal').style.display = 'none'">&times;</span>
+    <h3 class="modal__header">Return Item</h3>
+    <form id="returnItemForm" method="POST" action="">
+      {% csrf_token %}
+      <div class="form__group">
+        <label for="return_reason">Reason for Return</label>
+        <textarea name="return_reason" id="return_reason" class="form__input" style="height: 100px;" required placeholder="Please describe why you are returning this item..."></textarea>
+      </div>
+      <div class="form__btn" style="margin-top: 20px;">
+        <button type="submit" class="btn btn--md">Submit Return Request</button>
+      </div>
+    </form>
+  </div>
+</div>
 
+<script>
+  function openReturnItemModal(itemId) {
+    const modal = document.getElementById('returnItemModal');
+    const form = document.getElementById('returnItemForm');
+    form.action = `/account/return-order-item/${itemId}/`;
+    modal.style.display = 'block';
+  }
 
+  window.addEventListener('click', (event) => {
+    const modal = document.getElementById('returnItemModal');
+    if (event.target === modal) {
+      modal.style.display = 'none';
+    }
+  });
+</script>
 
-  {% endblock %}
+{% endblock %}
