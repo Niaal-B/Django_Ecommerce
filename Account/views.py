@@ -11,6 +11,11 @@ from django.contrib.auth.hashers import check_password
 from Order.models import Order,OrderItem
 from Products.models import SizeVariant
 from Wallet.models import Wallet, WalletTransaction
+from django.db import transaction
+import logging
+
+logger = logging.getLogger(__name__)
+
 @login_required
 def account(request):
     
@@ -122,20 +127,24 @@ def add_address(request):
             return redirect(next_url)
 
         
-        Address.objects.create(
-            user=request.user,
-            name=name,
-            address=address,
-            city=city,
-            state=state,
-            country=country,
-            postcode=postcode,
-            phone=phone,
-            email=email,
-            additional_info=additional_info
-        )
-
-        messages.success(request, 'Address added successfully!')
+        try:
+            Address.objects.create(
+                user=request.user,
+                name=name,
+                address=address,
+                city=city,
+                state=state,
+                country=country,
+                postcode=postcode,
+                phone=phone,
+                email=email,
+                additional_info=additional_info
+            )
+            messages.success(request, 'Address added successfully!')
+        except Exception as e:
+            logger.error(f"Error adding address for user {request.user.id}: {str(e)}", exc_info=True)
+            messages.error(request, 'An error occurred while saving the address. Please try again.')
+            return redirect(next_url)
         if not request.POST.get('next') or request.POST.get('next') == 'account':
             return redirect(f"{reverse('account')}?tab=address")
         return redirect(next_url) 
@@ -177,18 +186,22 @@ def edit_address(request):
             return redirect(next_url)
 
        
-        address.name = name
-        address.address = address_line
-        address.city = city
-        address.state = state
-        address.country = country
-        address.postcode = postcode
-        address.phone = phone
-        address.additional_info = request.POST.get('additional_info')
+        try:
+            address.name = name
+            address.address = address_line
+            address.city = city
+            address.state = state
+            address.country = country
+            address.postcode = postcode
+            address.phone = phone
+            address.additional_info = request.POST.get('additional_info')
 
-        address.save()
-
-        messages.success(request, 'Address updated successfully.')
+            address.save()
+            messages.success(request, 'Address updated successfully.')
+        except Exception as e:
+            logger.error(f"Error editing address {address_id} for user {request.user.id}: {str(e)}", exc_info=True)
+            messages.error(request, 'An error occurred while updating the address.')
+            return redirect(next_url)
         if not request.POST.get('next') or request.POST.get('next') == 'account':
             return redirect(f"{reverse('account')}?tab=address")
         return redirect(next_url) 
@@ -202,9 +215,13 @@ def delete_address(request, address_id):
     address = get_object_or_404(Address, id=address_id, user=request.user)
 
     if request.method == 'POST':
-        address.is_deleted = True
-        address.save()
-        messages.success(request, 'Address deleted successfully!')
+        try:
+            address.is_deleted = True
+            address.save()
+            messages.success(request, 'Address deleted successfully!')
+        except Exception as e:
+            logger.error(f"Error deleting address {address_id} for user {request.user.id}: {str(e)}", exc_info=True)
+            messages.error(request, 'An error occurred while deleting the address.')
         return redirect(f"{reverse('account')}?tab=address") 
 
     return redirect(f"{reverse('account')}?tab=address")
@@ -224,9 +241,13 @@ def update_password(request):
 
         if user.check_password(current_password):
             if password == confirm_password:
-                user.set_password(password)
-                user.save()
-                messages.success(request, 'Password updated successfully')
+                try:
+                    user.set_password(password)
+                    user.save()
+                    messages.success(request, 'Password updated successfully')
+                except Exception as e:
+                    logger.error(f"Error updating password for user {user.id}: {str(e)}", exc_info=True)
+                    messages.error(request, 'An error occurred while updating your password.')
                 return redirect('account')
             else:
                 messages.error(request, 'Passwords do not match')
@@ -238,7 +259,7 @@ def update_password(request):
 
 @login_required
 def view_order_items(request,order_id):
-    order = Order.objects.get(id=order_id,user=request.user)
+    order = get_object_or_404(Order, id=order_id, user=request.user)
     order_items = OrderItem.objects.filter(order=order).select_related('size_variant')
     for item in order_items:
         item.total_price = item.quantity * item.price
@@ -261,33 +282,39 @@ def cancel_order(request, order_id):
             messages.error(request, f"Cannot cancel order in '{order.get_status_display()}' status.")
         return redirect('account')
 
-    # Restore stock
-    order_items = order.items.all()
-    for item in order_items:
-        if item.size_variant:
-            item.size_variant.stock += item.quantity
-            item.size_variant.save()
+    try:
+        with transaction.atomic():
+            # Restore stock
+            order_items = order.items.all()
+            for item in order_items:
+                if item.size_variant:
+                    item.size_variant.stock += item.quantity
+                    item.size_variant.save()
 
-    # Update status and sync items
-    order.status = 'canceled'
-    order.save()
-    order.sync_items_status()
+            # Update status and sync items
+            order.status = 'canceled'
+            order.save()
+            order.sync_items_status()
 
-    # Refund to Wallet if payment was made
-    if order.payment_status == 'paid' or order.payment_method == 'razorpay':
-        user_wallet, created = Wallet.objects.get_or_create(user=request.user)
-        user_wallet.balance += order.total_price
-        user_wallet.save()
-        
-        WalletTransaction.objects.create(
-            wallet=user_wallet,
-            amount=order.total_price,
-            transaction_type='CREDIT',
-            description=f"Refund for canceled Order #{order.id}"
-        )
-        messages.success(request, f"Order canceled. amount ₹{order.total_price} has been credited to your wallet.")
-    else:
-        messages.success(request, "Order has been successfully canceled.")
+            # Refund to Wallet if payment was made
+            if order.payment_status == 'paid' or order.payment_method == 'razorpay':
+                user_wallet, created = Wallet.objects.get_or_create(user=request.user)
+                user_wallet.balance += order.total_price
+                user_wallet.save()
+                
+                WalletTransaction.objects.create(
+                    wallet=user_wallet,
+                    amount=order.total_price,
+                    transaction_type='CREDIT',
+                    description=f"Refund for canceled Order #{order.id}"
+                )
+                messages.success(request, f"Order canceled. amount ₹{order.total_price} has been credited to your wallet.")
+            else:
+                messages.success(request, "Order has been successfully canceled.")
+    except Exception as e:
+        logger.error(f"Error canceling order {order_id} for user {request.user.id}: {str(e)}", exc_info=True)
+        messages.error(request, "An error occurred while canceling the order. Please try again.")
+
     return redirect('account')
 
 @login_required
@@ -304,28 +331,33 @@ def return_order(request, order_id):
             messages.error(request, "Please provide a reason for return.")
             return redirect('account')
 
-        order.status = 'returned'
-        order.return_reason = return_reason
-        order.save()
-        
-        # Sync all items to 'returned' status
-        order.sync_items_status()
+        try:
+            with transaction.atomic():
+                order.status = 'returned'
+                order.return_reason = return_reason
+                order.save()
+                
+                # Sync all items to 'returned' status
+                order.sync_items_status()
 
-        # For now, credit wallet immediately on return (can be moved to admin approval later)
-        if order.payment_status == 'paid' or order.payment_method == 'razorpay':
-            user_wallet, created = Wallet.objects.get_or_create(user=request.user)
-            user_wallet.balance += order.total_price
-            user_wallet.save()
-            
-            WalletTransaction.objects.create(
-                wallet=user_wallet,
-                amount=order.total_price,
-                transaction_type='CREDIT',
-                description=f"Refund for returned Order #{order.id}"
-            )
-            messages.success(request, f"Return request submitted. amount ₹{order.total_price} has been credited to your wallet.")
-        else:
-            messages.success(request, f"Return request for Order #{order.id} has been submitted.")
+                # For now, credit wallet immediately on return (can be moved to admin approval later)
+                if order.payment_status == 'paid' or order.payment_method == 'razorpay':
+                    user_wallet, created = Wallet.objects.get_or_create(user=request.user)
+                    user_wallet.balance += order.total_price
+                    user_wallet.save()
+                    
+                    WalletTransaction.objects.create(
+                        wallet=user_wallet,
+                        amount=order.total_price,
+                        transaction_type='CREDIT',
+                        description=f"Refund for returned Order #{order.id}"
+                    )
+                    messages.success(request, f"Return request submitted. amount ₹{order.total_price} has been credited to your wallet.")
+                else:
+                    messages.success(request, f"Return request for Order #{order.id} has been submitted.")
+        except Exception as e:
+            logger.error(f"Error returning order {order_id} for user {request.user.id}: {str(e)}", exc_info=True)
+            messages.error(request, "An error occurred while submitting the return request.")
         return redirect('account')
 
     return redirect('account')
@@ -343,36 +375,41 @@ def cancel_order_item(request, item_id):
         messages.error(request, "This item is already canceled.")
         return redirect('view_order_items', order_id=order.id)
 
-    # Change item status
-    item.status = 'canceled'
-    item.save()
+    try:
+        with transaction.atomic():
+            # Change item status
+            item.status = 'canceled'
+            item.save()
 
-    # Restore stock
-    if item.size_variant:
-        item.size_variant.stock += item.quantity
-        item.size_variant.save()
+            # Restore stock
+            if item.size_variant:
+                item.size_variant.stock += item.quantity
+                item.size_variant.save()
 
-    # Determine Refund
-    if order.payment_status == 'paid' or order.payment_method == 'razorpay':
-        refund_amount = (item.price * item.quantity) - item.discount
-        user_wallet, created = Wallet.objects.get_or_create(user=request.user)
-        user_wallet.balance += refund_amount
-        user_wallet.save()
-        
-        WalletTransaction.objects.create(
-            wallet=user_wallet,
-            amount=refund_amount,
-            transaction_type='CREDIT',
-            description=f"Refund for canceled item ({item.product.name}) in Order #{order.id}"
-        )
-        messages.success(request, f"Item canceled. Amount ₹{refund_amount} has been credited to your wallet.")
-    else:
-        messages.success(request, f"Item '{item.product.name}' has been successfully canceled.")
+            # Determine Refund
+            if order.payment_status == 'paid' or order.payment_method == 'razorpay':
+                refund_amount = (item.price * item.quantity) - item.discount
+                user_wallet, created = Wallet.objects.get_or_create(user=request.user)
+                user_wallet.balance += refund_amount
+                user_wallet.save()
+                
+                WalletTransaction.objects.create(
+                    wallet=user_wallet,
+                    amount=refund_amount,
+                    transaction_type='CREDIT',
+                    description=f"Refund for canceled item ({item.product.name}) in Order #{order.id}"
+                )
+                messages.success(request, f"Item canceled. Amount ₹{refund_amount} has been credited to your wallet.")
+            else:
+                messages.success(request, f"Item '{item.product.name}' has been successfully canceled.")
 
-    # Check if all items are canceled to update parent order status
-    remaining_items = order.items.exclude(status='canceled')
-    if not remaining_items.exists():
-        order.status = 'canceled'
-        order.save()
+            # Check if all items are canceled to update parent order status
+            remaining_items = order.items.exclude(status='canceled')
+            if not remaining_items.exists():
+                order.status = 'canceled'
+                order.save()
+    except Exception as e:
+        logger.error(f"Error canceling order item {item_id} for user {request.user.id}: {str(e)}", exc_info=True)
+        messages.error(request, "An error occurred while canceling the item.")
 
     return redirect('view_order_items', order_id=order.id)

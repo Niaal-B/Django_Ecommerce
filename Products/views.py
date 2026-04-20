@@ -278,15 +278,21 @@ def add_size_variants(request, product_id):
 
 @user_passes_test(is_admin)
 def update_variant(request,variant_id):
-        variant = SizeVariant.objects.get(id=variant_id)
+        variant = get_object_or_404(SizeVariant, id=variant_id)
         if request.method == 'POST':
             size = request.POST.get('size')
             stock = request.POST.get('stock')
-
-            variant.size = size
-            variant.stock = F('stock') + stock
-            variant.save()
-            messages.success(request, 'Variant updated successfully!')
+            
+            try:
+                variant.size = size
+                variant.stock = F('stock') + int(stock)
+                variant.save()
+                messages.success(request, 'Variant updated successfully!')
+            except (ValueError, TypeError):
+                messages.error(request, "Invalid stock value.")
+            except Exception as e:
+                logger.error(f"Error updating variant {variant_id}: {str(e)}", exc_info=True)
+                messages.error(request, "An error occurred while updating the variant.")
             return redirect('variant', product_id=variant.product.id)
 
         context = {'variant': variant}
@@ -303,9 +309,9 @@ def delete_variant(request, variant_id):
     return redirect('variant', product_id=product_id)
 
 def product_details(request,product_id):
-    product = Product.objects.get(id = product_id)
+    product = get_object_or_404(Product, id=product_id)
     sizes = product.size_variants.filter(stock__gt = 0)
-    related_products = Product.objects.filter(category = product.category).exclude(id = product_id)
+    related_products = Product.objects.filter(category = product.category, is_listed=True).exclude(id = product_id)
 
     context = {
         'product' : product,

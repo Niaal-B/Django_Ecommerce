@@ -6,6 +6,10 @@ from Products.models import Product
 from Order.models import Coupon
 from django.contrib import messages
 from django.utils import timezone
+import logging
+
+logger = logging.getLogger(__name__)
+
 def cart(request):
     if request.user.is_authenticated:
         cart, created = Cart.objects.get_or_create(user=request.user)
@@ -16,8 +20,13 @@ def cart(request):
                 quantity = request.POST.get(f'quantity_{item.id}')
 
                 if quantity:
-                    item.quantity = int(float(quantity))  
-                    item.save()
+                    try:
+                        item.quantity = max(1, int(float(quantity)))  
+                        item.save()
+                    except (ValueError, TypeError):
+                        messages.warning(request, f"Invalid quantity for {item.product.name}. Skipping update.")
+                    except Exception as e:
+                        logger.error(f"Error saving cart item {item.id}: {str(e)}", exc_info=True)
                     
         total_price = sum(item.total_price() for item in user_cart)
         
@@ -78,10 +87,15 @@ def add_to_cart(request):
                 'message': f'Item with size {size} is already in your cart. You can update the quantity from the cart.'
             })
 
-        new_cart_item = CartItem(cart=cart, product=product, size=size, quantity=int(quantity))
-        new_cart_item.save()
-
-        return JsonResponse({'success': True, 'message': 'Item added to cart'})
+        try:
+            new_cart_item = CartItem(cart=cart, product=product, size=size, quantity=int(float(quantity)))
+            new_cart_item.save()
+            return JsonResponse({'success': True, 'message': 'Item added to cart'})
+        except (ValueError, TypeError):
+            return JsonResponse({'success': False, 'message': 'Invalid quantity received'}, status=400)
+        except Exception as e:
+            logger.error(f"Error adding to cart for user {request.user.id}: {str(e)}", exc_info=True)
+            return JsonResponse({'success': False, 'message': 'An error occurred while adding to cart'}, status=500)
 
     return JsonResponse({'success': False, 'message': 'User not authenticated or invalid request'}, status=400)
 
@@ -92,9 +106,13 @@ def remove_item_from_cart(request):
         item_id = body.get('itemId') 
 
         if item_id:
-            cart_item = CartItem.objects.get(id=item_id)
-            cart_item.delete()
-            return JsonResponse({'success': True,'message': 'Item removed from the cart'})
+            try:
+                cart_item = get_object_or_404(CartItem, id=item_id, cart__user=request.user)
+                cart_item.delete()
+                return JsonResponse({'success': True,'message': 'Item removed from the cart'})
+            except Exception as e:
+                logger.error(f"Error removing item {item_id} from cart: {str(e)}", exc_info=True)
+                return JsonResponse({'success': False, 'message': 'An error occurred while removing the item.'}, status=500)
         else:
             return JsonResponse({'success': False, 'message': 'Item ID not received.'})
 

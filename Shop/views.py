@@ -3,6 +3,10 @@ from Products.models import Product
 from Categories.models import Category
 from django.core.paginator import Paginator
 from django.conf import settings
+import logging
+from decimal import Decimal, InvalidOperation
+
+logger = logging.getLogger(__name__)
 
 def shop(request):
     
@@ -34,10 +38,14 @@ def shop(request):
     min_price = request.GET.get('min_price')
     max_price = request.GET.get('max_price')
     
-    if min_price:
-        products = products.filter(price__gte=min_price)
-    if max_price:
-        products = products.filter(price__lte=max_price)
+    try:
+        if min_price:
+            products = products.filter(price__gte=Decimal(min_price))
+        if max_price:
+            products = products.filter(price__lte=Decimal(max_price))
+    except (ValueError, InvalidOperation):
+        logger.warning(f"Invalid price filter values received: min={min_price}, max={max_price}")
+        # Continue with unfiltered products or previous filters
     
 
     products_count = products.count()
@@ -46,9 +54,11 @@ def shop(request):
     
 
     page_number = request.GET.get('page', 1)
-    
-
-    page_obj = paginator.get_page(page_number)
+    try:
+        page_obj = paginator.get_page(page_number)
+    except Exception as e:
+        logger.error(f"Pagination error: {str(e)}", exc_info=True)
+        page_obj = paginator.get_page(1)
     
 
     context = {

@@ -8,6 +8,7 @@ from decimal import Decimal
 import json
 import razorpay
 import logging
+from django.db import transaction
 
 from Account.models import Address
 from Cart.models import Cart, CartItem
@@ -126,37 +127,44 @@ def place_order(request):
                         "payment_capture": "1"
                     }
                     
-                    razorpay_order = client.order.create(data=payment_data)
-                    razorpay_order_id = razorpay_order['id']
+                    try:
+                        with transaction.atomic():
+                            razorpay_order = client.order.create(data=payment_data)
+                            razorpay_order_id = razorpay_order['id']
 
-                    # Create Pending Order before returning to frontend
-                    order = Order.objects.create(
-                        user=user,
-                        address=address,
-                        payment_method="razorpay",
-                        total_price=total,
-                        payment_status="pending",
-                        razorpay_order_id=razorpay_order_id,
-                        coupon_code=applied_coupon.code if applied_coupon else None,
-                        discount=discount_amount
-                    )
-                    
-                    if applied_coupon:
-                        applied_coupon.used_count += 1
-                        applied_coupon.save()
-                    if 'coupon_id' in request.session:
-                        del request.session['coupon_id']
+                            # Create Pending Order before returning to frontend
+                            order = Order.objects.create(
+                                user=user,
+                                address=address,
+                                payment_method="razorpay",
+                                total_price=total,
+                                payment_status="pending",
+                                razorpay_order_id=razorpay_order_id,
+                                coupon_code=applied_coupon.code if applied_coupon else None,
+                                discount=discount_amount
+                            )
+                            
+                            if applied_coupon:
+                                applied_coupon.used_count += 1
+                                applied_coupon.save()
+                            
+                            # Note: We don't delete coupon_id from session yet for Razorpay, 
+                            # in case payment fails and they want to retry.
+                            # It will be cleared in payment_success.
 
-                    for item in cart_items:
-                        OrderItem.objects.create(
-                            order=order,
-                            product=item.product,
-                            quantity=item.quantity,
-                            price=item.product.offer if item.product.offer and item.product.offer > 0 else item.product.price,
-                            size_variant=SizeVariant.objects.get(product=item.product, size=item.size),
-                            status="pending",
-                            discount=getattr(item, 'computed_discount', Decimal('0.00'))
-                        )
+                            for item in cart_items:
+                                OrderItem.objects.create(
+                                    order=order,
+                                    product=item.product,
+                                    quantity=item.quantity,
+                                    price=item.product.offer if item.product.offer and item.product.offer > 0 else item.product.price,
+                                    size_variant=SizeVariant.objects.get(product=item.product, size=item.size),
+                                    status="pending",
+                                    discount=getattr(item, 'computed_discount', Decimal('0.00'))
+                                )
+                    except Exception as e:
+                        logger.error(f"Failed to create Razorpay order or internal order record: {str(e)}", exc_info=True)
+                        return JsonResponse({"error": "Failed to initiate payment. Please try again."}, status=500)
 
                     context = {
                         'razorpay_order_id': razorpay_order_id,
@@ -179,93 +187,108 @@ def place_order(request):
                 if user_wallet.balance < total:
                     return JsonResponse({"error": f"Insufficient wallet balance. Available: ₹{user_wallet.balance}"}, status=400)
                 
-                # Deduct from wallet
-                user_wallet.balance -= total
-                user_wallet.save()
-                
-                # Create Order
-                order = Order.objects.create(
-                    user=user,
-                    address=address,
-                    payment_method="wallet",
-                    total_price=total,
-                    payment_status="paid",
-                    status="confirmed",
-                    coupon_code=applied_coupon.code if applied_coupon else None,
-                    discount=discount_amount
-                )
+                try:
+                    with transaction.atomic():
+                        # Deduct from wallet
+                        user_wallet.balance -= total
+                        user_wallet.save()
+                        
+                        # Create Order
+                        order = Order.objects.create(
+                            user=user,
+                            address=address,
+                            payment_method="wallet",
+                            total_price=total,
+                            payment_status="paid",
+                            status="confirmed",
+                            coupon_code=applied_coupon.code if applied_coupon else None,
+                            discount=discount_amount
+                        )
 
-                if applied_coupon:
-                    applied_coupon.used_count += 1
-                    applied_coupon.save()
-                if 'coupon_id' in request.session:
-                    del request.session['coupon_id']
+                        if applied_coupon:
+                            applied_coupon.used_count += 1
+                            applied_coupon.save()
+                        if 'coupon_id' in request.session:
+                            del request.session['coupon_id']
+                        
+                        # Create Wallet Transaction
+                        WalletTransaction.objects.create(
+                            wallet=user_wallet,
+                            amount=total,
+                            transaction_type='DEBIT',
+                            description=f"Payment for Order #{order.id}"
+                        )
+                        
+                        for item in cart_items:
+                            size_variant = SizeVariant.objects.get(product=item.product, size=item.size)
+                            size_variant.stock -= int(item.quantity)
+                            size_variant.save()
+                            
+                            price = item.product.offer if item.product.offer and item.product.offer > 0 else item.product.price
+                            OrderItem.objects.create(
+                                order=order,
+                                product=item.product,
+                                quantity=item.quantity,
+                                price=price,
+                                size_variant=size_variant,
+                                status="confirmed",
+                                discount=getattr(item, 'computed_discount', Decimal('0.00'))
+                            )
+                        
+                        cart_items.delete()
+                except Exception as e:
+                    logger.error(f"Wallet payment failed for user {user.id}: {str(e)}", exc_info=True)
+                    return JsonResponse({"error": "An error occurred during wallet payment processing."}, status=500)
                 
-                # Create Wallet Transaction
-                WalletTransaction.objects.create(
-                    wallet=user_wallet,
-                    amount=total,
-                    transaction_type='DEBIT',
-                    description=f"Payment for Order #{order.id}"
-                )
-                
-                for item in cart_items:
-                    size_variant = SizeVariant.objects.get(product=item.product, size=item.size)
-                    size_variant.stock -= int(item.quantity)
-                    size_variant.save()
-                    
-                    price = item.product.offer if item.product.offer and item.product.offer > 0 else item.product.price
-                    OrderItem.objects.create(
-                        order=order,
-                        product=item.product,
-                        quantity=item.quantity,
-                        price=price,
-                        size_variant=size_variant,
-                        status="confirmed",
-                        discount=getattr(item, 'computed_discount', Decimal('0.00'))
-                    )
-                
-                cart_items.delete()
                 return JsonResponse({"success": "Order placed successfully using wallet!"}, status=200)
 
-            # Create Order for COD
-            order = Order.objects.create(
-                user=user,
-                address=address,
-                payment_method=payment_method,
-                total_price=total,
-                coupon_code=applied_coupon.code if applied_coupon else None,
-                discount=discount_amount
-            )
-
-            if applied_coupon:
-                applied_coupon.used_count += 1
-                applied_coupon.save()
-            if 'coupon_id' in request.session:
-                del request.session['coupon_id']
-
-            for item in cart_items:
-                try:
-                    size_variant = SizeVariant.objects.get(product=item.product, size=item.size)
-                    if size_variant.stock < item.quantity:
-                        return JsonResponse({"error": f"Not enough stock for {item.product.name} (Size: {item.size})."}, status=400)
-
-                    size_variant.stock -= int(item.quantity)
-                    size_variant.save()
-
-                    price = item.product.offer if item.product.offer and item.product.offer > 0 else item.product.price
-                    OrderItem.objects.create(
-                        order=order,
-                        product=item.product,
-                        quantity=item.quantity,
-                        price=price,
-                        size_variant=size_variant,
-                        discount=getattr(item, 'computed_discount', Decimal('0.00'))
+            try:
+                with transaction.atomic():
+                    # Create Order for COD
+                    order = Order.objects.create(
+                        user=user,
+                        address=address,
+                        payment_method=payment_method,
+                        total_price=total,
+                        coupon_code=applied_coupon.code if applied_coupon else None,
+                        discount=discount_amount
                     )
-                except SizeVariant.DoesNotExist:
-                    return JsonResponse({"error": f"Size variant not found for {item.product.name} (Size: {item.size})."}, status=400)
 
-            cart_items.delete()
+                    if applied_coupon:
+                        applied_coupon.used_count += 1
+                        applied_coupon.save()
+                    if 'coupon_id' in request.session:
+                        del request.session['coupon_id']
+
+                    for item in cart_items:
+                        try:
+                            size_variant = SizeVariant.objects.get(product=item.product, size=item.size)
+                            if size_variant.stock < item.quantity:
+                                # This will trigger rollback
+                                raise ValueError(f"Not enough stock for {item.product.name}")
+
+                            size_variant.stock -= int(item.quantity)
+                            size_variant.save()
+
+                            price = item.product.offer if item.product.offer and item.product.offer > 0 else item.product.price
+                            OrderItem.objects.create(
+                                order=order,
+                                product=item.product,
+                                quantity=item.quantity,
+                                price=price,
+                                size_variant=size_variant,
+                                discount=getattr(item, 'computed_discount', Decimal('0.00'))
+                            )
+                        except SizeVariant.DoesNotExist:
+                            raise ValueError(f"Size variant not found for {item.product.name}")
+
+                    cart_items.delete()
+            except ValueError as ve:
+                return JsonResponse({"error": str(ve)}, status=400)
+            except Exception as e:
+                logger.error(f"COD order placement failed for user {user.id}: {str(e)}", exc_info=True)
+                return JsonResponse({"error": "An error occurred while placing your order."}, status=500)
+
             return JsonResponse({"success": "Order placed successfully!"}, status=200)
 
         except json.JSONDecodeError:
@@ -386,24 +409,29 @@ def payment_success(request):
                     return redirect('order_success')
 
                 # Update Order to Confirmed
-                order.payment_status = "paid"
-                order.payment_id = razorpay_payment_id
-                order.status = "confirmed"
-                order.save()
-                order.sync_items_status()
+                with transaction.atomic():
+                    order.payment_status = "paid"
+                    order.payment_id = razorpay_payment_id
+                    order.status = "confirmed"
+                    order.save()
+                    order.sync_items_status()
 
-                # Deduct stock and finalize items
-                for item in order.items.all():
-                    if item.size_variant:
-                        item.size_variant.stock -= item.quantity
-                        item.size_variant.save()
+                    # Deduct stock and finalize items
+                    for item in order.items.all():
+                        if item.size_variant:
+                            item.size_variant.stock -= item.quantity
+                            item.size_variant.save()
 
-                # Clear User's Cart
-                try:
-                    cart = Cart.objects.get(user=request.user)
-                    CartItem.objects.filter(cart=cart).delete()
-                except Cart.DoesNotExist:
-                    pass
+                    # Clear User's Cart
+                    try:
+                        cart = Cart.objects.get(user=request.user)
+                        CartItem.objects.filter(cart=cart).delete()
+                    except Cart.DoesNotExist:
+                        pass
+                    
+                    # Clear session coupon if any
+                    if 'coupon_id' in request.session:
+                        del request.session['coupon_id']
 
                 if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.content_type == 'application/json':
                     return JsonResponse({'success': 'Payment successful and order placed!'})
@@ -451,24 +479,25 @@ def razorpay_webhook(request):
                 try:
                     order = Order.objects.get(razorpay_order_id=razorpay_order_id)
                     if order.payment_status != "paid":
-                        order.payment_status = "paid"
-                        order.payment_id = payment_id
-                        order.status = "confirmed"
-                        order.save()
-                        order.sync_items_status()
-                        
-                        # Decrease stock for items in this order
-                        for item in order.items.all():
-                            if item.size_variant:
-                                item.size_variant.stock -= item.quantity
-                                item.size_variant.save()
-                        
-                        # Clear cart for the user who placed the order
-                        try:
-                            cart = Cart.objects.get(user=order.user)
-                            CartItem.objects.filter(cart=cart).delete()
-                        except Cart.DoesNotExist:
-                            pass
+                        with transaction.atomic():
+                            order.payment_status = "paid"
+                            order.payment_id = payment_id
+                            order.status = "confirmed"
+                            order.save()
+                            order.sync_items_status()
+                            
+                            # Decrease stock for items in this order
+                            for item in order.items.all():
+                                if item.size_variant:
+                                    item.size_variant.stock -= item.quantity
+                                    item.size_variant.save()
+                            
+                            # Clear cart for the user who placed the order
+                            try:
+                                cart = Cart.objects.get(user=order.user)
+                                CartItem.objects.filter(cart=cart).delete()
+                            except Cart.DoesNotExist:
+                                pass
                             
                 except Order.DoesNotExist:
                     logging.error(f"Order with razorpay_order_id {razorpay_order_id} not found during webhook")
