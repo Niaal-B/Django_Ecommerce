@@ -56,8 +56,11 @@
         <p class="account__tab" data-target="#orders">
           <i class="fi fi-rs-shopping-bag"></i> Orders
         </p>
+        <p class="account__tab" data-target="#my-profile">
+          <i class="fi fi-rs-user"></i> My Profile
+        </p>
         <p class="account__tab" data-target="#update-profile">
-          <i class="fi fi-rs-user"></i> Update Profile
+          <i class="fi fi-rs-settings-sliders"></i> Update Profile
         </p>
         <p class="account__tab" data-target="#address">
           <i class="fi fi-rs-marker"></i> My Address
@@ -120,6 +123,19 @@
                 {% endfor %}
               </tbody>
             </table>
+          </div>
+        </div>
+        <div class="tab__content" content id="my-profile">
+          <h3 class="tab__header">My Profile</h3>
+          <div class="tab__body">
+            <div style="background: #f8f9fa; padding: 25px; border-radius: 8px; border: 1px solid #e9ecef; margin-bottom: 20px;">
+              <h4 style="margin-bottom: 15px; color: #333;"><i class="fi fi-rs-user"></i> Profile Details</h4>
+              <p style="margin-bottom: 8px; font-size: 16px;"><strong>Username:</strong> {{ user.username }}</p>
+              <p style="margin-bottom: 8px; font-size: 16px;"><strong>Full Name:</strong> {{ user.first_name }} {{ user.last_name }}</p>
+              <p style="margin-bottom: 8px; font-size: 16px;"><strong>Email Address:</strong> {{ user.email|default:"Not Provided" }}</p>
+              <p style="margin-bottom: 8px; font-size: 16px;"><strong>Account Created:</strong> {{ user.date_joined|date:"M d, Y" }}</p>
+              <p style="margin-bottom: 8px; font-size: 16px;"><strong>Last Login:</strong> {{ user.last_login|date:"M d, Y h:i A" }}</p>
+            </div>
           </div>
         </div>
         <div class="tab__content" content id="update-profile">
